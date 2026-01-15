@@ -8,6 +8,8 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 import java.util.Map;
 
+// OpenAI 호출 전용 클래스
+
 @Component
 public class OpenAiClient {
 
