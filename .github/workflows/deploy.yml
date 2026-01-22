@@ -22,9 +22,10 @@ jobs:
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
-          password: "qjrjld0102!"  # 따옴표 안에 하드코딩된 비번 확인
+          password: "qjrjld0102!"
           port: 22
           script_stop: true
+          debug: true
           script: |
             cd ${{ secrets.DEPLOY_PATH }}
             git pull origin main
