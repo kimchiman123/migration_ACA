@@ -42,7 +42,7 @@ public class UserInfo {
     @Column(name = "joindate", nullable = false, updatable = false)
     private LocalDateTime joinDate;
 
-    @Column(name = "loginfailcount", nullable = false)
+    @Column(name = "loginfailcount", nullable = false, columnDefinition = "integer default 0")
     private int loginFailCount;
 
     @Column(name = "provider", length = 20)

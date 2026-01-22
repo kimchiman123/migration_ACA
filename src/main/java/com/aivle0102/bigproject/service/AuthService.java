@@ -52,7 +52,12 @@ public class AuthService {
         String hashedPassword = passwordEncoder.encode(request.getPassword());
         String salt = hashedPassword.substring(0, 29);
 
-        LocalDate.parse(request.getBirthDate());
+        try {
+            LocalDate.parse(request.getBirthDate());
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new CustomException("생년월일 형식이 올바르지 않습니다. (YYYY-MM-DD)", HttpStatus.BAD_REQUEST,
+                    "INVALID_DATE_FORMAT");
+        }
 
         UserInfo userInfo = UserInfo.builder()
                 .userId(request.getUserId())
@@ -89,10 +94,12 @@ public class AuthService {
                 throw new CustomException("비밀번호 재설정이 필요합니다.", HttpStatus.FORBIDDEN, "PASSWORD_RESET_REQUIRED");
             }
             if (nextFailCount == MAX_LOGIN_FAILURES - 1) {
-                throw new CustomException("로그인 시도 횟수가 얼마 남지 않았습니다.", HttpStatus.UNAUTHORIZED, "PASSWORD_RESET_WARNING_4");
+                throw new CustomException("로그인 시도 횟수가 얼마 남지 않았습니다.", HttpStatus.UNAUTHORIZED,
+                        "PASSWORD_RESET_WARNING_4");
             }
             if (nextFailCount == MAX_LOGIN_FAILURES - 2) {
-                throw new CustomException("로그인 시도 횟수가 얼마 남지 않았습니다.", HttpStatus.UNAUTHORIZED, "PASSWORD_RESET_WARNING_3");
+                throw new CustomException("로그인 시도 횟수가 얼마 남지 않았습니다.", HttpStatus.UNAUTHORIZED,
+                        "PASSWORD_RESET_WARNING_3");
             }
             throw new CustomException("PW를 다시 확인해주세요.", HttpStatus.UNAUTHORIZED, "INVALID_PASSWORD");
         }
@@ -134,8 +141,9 @@ public class AuthService {
         UserInfo userInfo = userInfoRepository.findByUserIdAndUserNameAndUserState(
                 request.getUserId(),
                 request.getUserName(),
-                "1"
-        ).orElseThrow(() -> new CustomException("아이디와 이름이 일치하지 않습니다.", HttpStatus.BAD_REQUEST, "USER_EMAIL_MISMATCH"));
+                "1")
+                .orElseThrow(() -> new CustomException("아이디와 이름이 일치하지 않습니다.", HttpStatus.BAD_REQUEST,
+                        "USER_EMAIL_MISMATCH"));
 
         if (passwordEncoder.matches(request.getNewPassword(), userInfo.getUserPwHash())) {
             throw new CustomException("이전 비밀번호와 동일합니다.", HttpStatus.BAD_REQUEST, "PASSWORD_SAME_AS_BEFORE");
