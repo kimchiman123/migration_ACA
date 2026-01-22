@@ -35,12 +35,12 @@ services:
       db:
         condition: service_healthy
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE:-prod}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE:-prod,oauth}
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${DB_NAME:-bigproject}
       SPRING_DATASOURCE_USERNAME: ${DB_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-postgres}
       SPRING_JPA_HIBERNATE_DDL_AUTO: ${DDL_AUTO:-update}
-      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+      JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
       # External APIs
       OPENAI_API_KEY: ${OPENAI_API_KEY}
