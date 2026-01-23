@@ -1,6 +1,7 @@
 name: Deploy to Production
 
 on:
+  # CI 워크플로우 완료 후 자동 배포
   workflow_run:
     workflows: ["Frontend CI", "Backend CI"]
     types:
@@ -8,10 +9,28 @@ on:
     branches:
       - main
 
+  # 인프라 핵심 파일 변경 시 즉시 배포
+  push:
+    branches:
+      - main
+    paths:
+      - 'docker-compose.yml'
+      - 'frontend/nginx.conf'
+      - '.github/workflows/deploy.yml'
+      - 'Dockerfile'
+      - 'frontend/Dockerfile'
+
+  # 수동 실행 지원
+  workflow_dispatch:
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # workflow_run 이벤트일 때만 success 체크, push/dispatch는 항상 실행
+    if: |
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
 
     steps:
       - name: Checkout code
@@ -20,10 +39,6 @@ jobs:
       - name: Create frontend .env file
         run: |
           echo "VITE_API_URL=http://20.197.14.81/api" > ./frontend/.env
-
-      - name: Build Docker Images
-        run: |
-          docker compose build
 
       - name: Deploy to Azure VM
         uses: appleboy/ssh-action@v1.0.3
@@ -35,7 +50,7 @@ jobs:
           script: |
             cd ${{ secrets.DEPLOY_PATH }}
             git pull origin main
-            docker compose pull
+            docker compose down
             docker compose up -d --build
 
       # TODO: Enable Slack notification after CI/CD verification
