@@ -8,8 +8,6 @@ CREATE TABLE IF NOT EXISTS notice (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-<<<<<<< HEAD
-=======
 CREATE TABLE IF NOT EXISTS userinfo (
     userSeq INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     userId VARCHAR(50) NOT NULL,
@@ -38,7 +36,6 @@ COMMENT ON COLUMN userinfo.userName IS '유저 Name';
 COMMENT ON COLUMN userinfo.userState IS '유저 상태 0 정지 1 활동';
 COMMENT ON COLUMN userinfo.joinDate IS '가입일자';
 
->>>>>>> upstream/UI3
 CREATE TABLE IF NOT EXISTS notice_comment (
     id BIGSERIAL PRIMARY KEY,
     notice_id BIGINT NOT NULL REFERENCES notice(id) ON DELETE CASCADE,
@@ -61,11 +58,8 @@ CREATE TABLE IF NOT EXISTS recipe (
     report_json TEXT,
     summary TEXT,
     image_base64 TEXT,
-<<<<<<< HEAD
-=======
     influencer_json TEXT,
     influencer_image_base64 TEXT,
->>>>>>> upstream/UI3
     status VARCHAR(20) NOT NULL DEFAULT 'PUBLISHED',
     author_id VARCHAR(50) NOT NULL,
     author_name VARCHAR(50),
@@ -74,11 +68,8 @@ CREATE TABLE IF NOT EXISTS recipe (
 
 CREATE INDEX IF NOT EXISTS idx_recipe_created_at ON recipe(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_recipe_author_id ON recipe(author_id);
-<<<<<<< HEAD
-=======
 
 -- Migration: add influencer storage columns for existing databases
 ALTER TABLE recipe
     ADD COLUMN IF NOT EXISTS influencer_json TEXT,
     ADD COLUMN IF NOT EXISTS influencer_image_base64 TEXT;
->>>>>>> upstream/UI3
