@@ -14,15 +14,14 @@ import java.io.IOException;
 @Component
 public class OAuth2AuthenticationFailureHandler implements AuthenticationFailureHandler {
 
-    @Value("${app.oauth2.redirect-uri}")
+    @Value("${app.oauth2.authorized-redirect-uri}")
     private String redirectUri;
 
     @Override
     public void onAuthenticationFailure(
             HttpServletRequest request,
             HttpServletResponse response,
-            AuthenticationException exception
-    ) throws IOException, ServletException {
+            AuthenticationException exception) throws IOException, ServletException {
         String targetUrl = UriComponentsBuilder.fromUriString(redirectUri)
                 .queryParam("error", "oauth_failed")
                 .build()

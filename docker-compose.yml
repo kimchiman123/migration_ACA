@@ -56,6 +56,7 @@ services:
       NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET}
       KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
       KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET}
+      OAUTH2_REDIRECT_URI: http://20.197.14.81/oauth/callback
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     networks:
