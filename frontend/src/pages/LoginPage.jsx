@@ -20,7 +20,7 @@ const LoginPage = () => {
     const handleSocialLogin = (provider) => {
         sessionStorage.setItem('oauthFlow', 'login');
         localStorage.setItem('oauthFlow', 'login');
-        window.location.href = `http://20.197.14.81:8080/oauth2/authorization/${provider}`;
+        window.location.href = `/oauth2/authorization/${provider}`;
     };
 
 

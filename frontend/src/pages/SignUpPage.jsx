@@ -60,7 +60,7 @@ const SignUpPage = () => {
     const handleSocialSignup = (provider) => {
         sessionStorage.setItem('oauthFlow', 'signup');
         localStorage.setItem('oauthFlow', 'signup');
-        window.location.href = `http://20.197.14.81:8080/oauth2/authorization/${provider}`;
+        window.location.href = `/oauth2/authorization/${provider}`;
     };
 
 
