@@ -19,7 +19,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -73,16 +72,18 @@ public class SecurityConfig {
                 return http.build();
         }
 
-        @org.springframework.beans.factory.annotation.Value("${cors.allowed-origins:http://localhost:3000,http://localhost:5173,http://localhost,http://20.197.14.81}")
-        private List<String> allowedOrigins;
-
         @Bean
         public CorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration configuration = new CorsConfiguration();
-                // 환경변수로부터 주입받은 Origin 목록 사용
-                configuration.setAllowedOrigins(allowedOrigins);
+                // 프론트엔드 주소 허용 (공인 IP 포함)
+                configuration.setAllowedOrigins(Arrays.asList(
+                                "http://localhost:3000",
+                                "http://localhost:5173",
+                                "http://localhost",
+                                "http://20.197.14.81",
+                                "http://20.197.14.81:80"));
                 configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-                configuration.setAllowedHeaders(List.of("*"));
+                configuration.setAllowedHeaders(Arrays.asList("*"));
                 configuration.setAllowCredentials(true);
 
                 UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
