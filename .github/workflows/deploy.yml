@@ -17,14 +17,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create .env file
+      - name: Create frontend .env file
         run: |
-          echo "VITE_API_URL=${{ secrets.VITE_API_URL }}" > ./frontend/.env
+          echo "VITE_API_URL=http://20.197.14.81/api" > ./frontend/.env
 
-      - name: Build and Push Docker Images
+      - name: Build Docker Images
         run: |
-          docker-compose build
-          docker-compose push
+          docker compose build
 
       - name: Deploy to Azure VM
         uses: appleboy/ssh-action@v1.0.3
@@ -36,8 +35,8 @@ jobs:
           script: |
             cd ${{ secrets.DEPLOY_PATH }}
             git pull origin main
-            docker-compose pull
-            docker-compose up -d --build
+            docker compose pull
+            docker compose up -d --build
 
       # TODO: Enable Slack notification after CI/CD verification
       # - name: Notify deployment status
