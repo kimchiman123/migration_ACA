@@ -24,6 +24,9 @@ CREATE TABLE IF NOT EXISTS userinfo (
     password_changed_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- 기존 DB를 위한 마이그레이션 구문 (반드시 포함)
+ALTER TABLE userinfo ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP NOT NULL DEFAULT NOW();
+
 CREATE UNIQUE INDEX IF NOT EXISTS ux_userinfo_userid ON userinfo (userId);
 
 COMMENT ON TABLE userinfo IS '유저 정보 테이블';
