@@ -1,0 +1,83 @@
+name: Deploy to Azure Container Apps
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  RESOURCE_GROUP: "big_project" # 리소스 그룹 이름
+  
+  BACKEND_ACR: "bpback" # 백엔드 ACR 이름
+  FRONTEND_ACR: "bpfront" # 프론트엔드 ACR 이름   
+
+  # 백엔드 설정
+  BACKEND_IMAGE_NAME: "backend"
+  BACKEND_APP_NAME: "bp-backend-app" 
+  
+  # 프론트엔드 설정
+  FRONTEND_IMAGE_NAME: "frontend"
+  FRONTEND_APP_NAME: "bp-frontend-app" 
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      # 1. Azure 로그인
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # 2. ACR 로그인
+      - name: ACR Login
+        run: |
+          az acr login --name ${{ env.BACKEND_ACR }}
+          az acr login --name ${{ env.FRONTEND_ACR }}
+
+      # 3. Backend 이미지 빌드 및 푸시
+      - name: Build and Push Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ env.BACKEND_ACR }}.azurecr.io/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=registry,ref=${{ env.BACKEND_ACR }}.azurecr.io/${{ env.BACKEND_IMAGE_NAME }}:latest
+          cache-to: type=inline
+
+      # 4. Frontend 이미지 빌드 및 푸시
+      - name: Build and Push Frontend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ env.FRONTEND_ACR }}.azurecr.io/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
+          build-args: |
+             VITE_API_URL=https://${{ env.BACKEND_APP_NAME }}.wittymushroom-76c80f0d.centralindia.azurecontainerapps.io
+          cache-from: type=registry,ref=${{ env.FRONTEND_ACR }}.azurecr.io/${{ env.FRONTEND_IMAGE_NAME }}:latest
+          cache-to: type=inline
+
+      # 5. Backend Container App 업데이트
+      - name: Deploy Backend to ACA
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          imageToDeploy: ${{ env.BACKEND_ACR }}.azurecr.io/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
+          containerAppName: ${{ env.BACKEND_APP_NAME }}
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+
+      # 6. Frontend Container App 업데이트
+      - name: Deploy Frontend to ACA
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          imageToDeploy: ${{ env.FRONTEND_ACR }}.azurecr.io/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
+          containerAppName: ${{ env.FRONTEND_APP_NAME }}
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
