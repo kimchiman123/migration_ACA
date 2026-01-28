@@ -49,12 +49,7 @@ public class SecurityConfig {
                                                         .secure(true));
                                         csrf.csrfTokenRepository(csrfTokenRepository)
                                                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-                                                        .ignoringRequestMatchers(
-                                                                        "/api/auth/**",
-                                                                        "/api/csrf",
-                                                                        "/api/notices/**",
-                                                                        "/api/user/**",
-                                                                        "/api/recipes/**");
+                                                        .ignoringRequestMatchers("/api/auth/**", "/api/csrf");
                                 })
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                                 .sessionManagement(session -> session
@@ -90,12 +85,7 @@ public class SecurityConfig {
                                                         .secure(true));
                                         csrf.csrfTokenRepository(csrfTokenRepository)
                                                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-                                                        .ignoringRequestMatchers(
-                                                                        "/api/auth/**",
-                                                                        "/api/csrf",
-                                                                        "/api/notices/**",
-                                                                        "/api/user/**",
-                                                                        "/api/recipes/**");
+                                                        .ignoringRequestMatchers("/api/auth/**", "/api/csrf");
                                 })
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                                 .sessionManagement(session -> session
