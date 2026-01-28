@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -57,12 +59,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 if (jwtTokenProvider.validateToken(token)) {
                     String userId = jwtTokenProvider.getUserId(token);
-                    log.info("[JWT Filter] Token validated successfully for user: {}", userId);
+                    String role = jwtTokenProvider.getRole(token);
+
+                    log.info("[JWT Filter] Token validated successfully for user: {}, role: {}", userId, role);
+
+                    // 권한(Role) 설정 - 기본값은 ROLE_USER
+                    List<SimpleGrantedAuthority> authorities;
+                    if (role != null && !role.isEmpty()) {
+                        authorities = List.of(new SimpleGrantedAuthority(role));
+                    } else {
+                        authorities = List.of(new SimpleGrantedAuthority("ROLE_USER"));
+                    }
+
+                    log.debug("[JWT Filter] Granted Authorities: {}", authorities);
 
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             userId,
                             null,
-                            Collections.emptyList());
+                            authorities);
 
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
