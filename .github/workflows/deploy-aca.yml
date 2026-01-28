@@ -62,7 +62,7 @@ jobs:
           push: true
           tags: ${{ env.FRONTEND_ACR }}.azurecr.io/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
           build-args: |
-             VITE_API_URL=https://${{ env.BACKEND_APP_NAME }}.wittymushroom-76c80f0d.centralindia.azurecontainerapps.io
+             VITE_API_URL=https://${{ env.BACKEND_APP_NAME }}.wittymushroom-76c80f0d.centralindia.azurecontainerapps.io/api
           cache-from: type=registry,ref=${{ env.FRONTEND_ACR }}.azurecr.io/${{ env.FRONTEND_IMAGE_NAME }}:latest
           cache-to: type=inline
 
