@@ -74,111 +74,65 @@ jobs:
           containerAppName: ${{ env.BACKEND_APP_NAME }}
           resourceGroup: ${{ env.RESOURCE_GROUP }}
 
-      # 5-1. Backend Startup & Readiness Probe 설정 (REST API 기반)
+      # 5-1. Backend Startup Probe 설정 (가장 단순한 구조)
       - name: Configure Backend Health Probes
         run: |
-          # 현재 Container App 설정 가져오기
           SUBSCRIPTION_ID=$(az account show --query id -o tsv)
           
-          # Container App 현재 설정 조회
-          CURRENT_CONFIG=$(az containerapp show \
+          # 현재 컨테이너 이미지와 환경변수 가져오기
+          CURRENT_IMAGE=$(az containerapp show \
             --name ${{ env.BACKEND_APP_NAME }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --output json)
+            --query "properties.template.containers[0].image" -o tsv)
           
-          # jq로 설정 정리: 문제되는 속성 모두 제거, ingress 단순화, probes 추가
-          UPDATED_CONFIG=$(echo "$CURRENT_CONFIG" | jq '
-            # 불필요한 읽기 전용 필드 및 문제되는 속성 제거
-            del(
-              .id, 
-              .name, 
-              .type, 
-              .systemData,
-              .identity,
-              .properties.provisioningState,
-              .properties.runningStatus,
-              .properties.managedEnvironmentId,
-              .properties.environmentId,
-              .properties.latestRevisionName,
-              .properties.latestReadyRevisionName,
-              .properties.latestRevisionFqdn,
-              .properties.customDomainVerificationId,
-              .properties.outboundIpAddresses,
-              .properties.eventStreamEndpoint,
-              .properties.configuration.identitySettings,
-              .properties.configuration.runtime,
-              .properties.configuration.ingress.fqdn,
-              .properties.configuration.ingress.customDomains,
-              .properties.configuration.ingress.traffic,
-              .properties.configuration.ingress.additionalPortMappings,
-              .properties.configuration.ingress.stickySessions,
-              .properties.configuration.ingress.targetPortHttpScheme,
-              .properties.template.revisionSuffix,
-              .properties.template.terminationGracePeriodSeconds,
-              .properties.template.initContainers,
-              .properties.template.serviceBinds
-            ) |
-            
-            # ingress 단순화 (필수 필드만)
-            .properties.configuration.ingress = {
-              "external": true,
-              "targetPort": 8080,
-              "transport": "auto",
-              "allowInsecure": false
-            } |
-            
-            # probes 설정 추가
-            .properties.template.containers[0].probes = [
-              {
-                "type": "startup",
-                "httpGet": {
-                  "path": "/api/health",
-                  "port": 8080,
-                  "scheme": "HTTP"
-                },
-                "initialDelaySeconds": 60,
-                "periodSeconds": 10,
-                "failureThreshold": 5,
-                "timeoutSeconds": 10
+          CURRENT_ENV=$(az containerapp show \
+            --name ${{ env.BACKEND_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --query "properties.template.containers[0].env" -o json)
+          
+          # 가장 단순한 PATCH 요청 (ingress + probes + env만)
+          cat > containerapp-patch.json << EOF
+          {
+            "properties": {
+              "configuration": {
+                "ingress": {
+                  "external": true,
+                  "targetPort": 8080
+                }
               },
-              {
-                "type": "readiness",
-                "httpGet": {
-                  "path": "/api/health",
-                  "port": 8080,
-                  "scheme": "HTTP"
-                },
-                "periodSeconds": 10,
-                "successThreshold": 1,
-                "failureThreshold": 3,
-                "timeoutSeconds": 5
-              },
-              {
-                "type": "liveness",
-                "httpGet": {
-                  "path": "/api/health",
-                  "port": 8080,
-                  "scheme": "HTTP"
-                },
-                "periodSeconds": 30,
-                "failureThreshold": 3,
-                "timeoutSeconds": 5
+              "template": {
+                "containers": [
+                  {
+                    "name": "${{ env.BACKEND_APP_NAME }}",
+                    "image": "${CURRENT_IMAGE}",
+                    "env": ${CURRENT_ENV},
+                    "probes": [
+                      {
+                        "type": "startup",
+                        "httpGet": {
+                          "path": "/api/health",
+                          "port": 8080
+                        },
+                        "initialDelaySeconds": 60,
+                        "periodSeconds": 10,
+                        "failureThreshold": 5
+                      }
+                    ]
+                  }
+                ]
               }
-            ]
-          ')
+            }
+          }
+          EOF
           
-          # JSON 파일로 저장
-          echo "$UPDATED_CONFIG" > containerapp-backend.json
+          # 디버그 출력
+          echo "=== PATCH Request Body ==="
+          cat containerapp-patch.json | jq '.'
           
-          # 디버그: 최종 설정 구조 확인
-          echo "=== Final Configuration Structure ==="
-          cat containerapp-backend.json | jq 'keys'
-          cat containerapp-backend.json | jq '.properties | keys'
-          
-          # REST API로 업데이트 (az rest 사용)
+          # REST API로 업데이트
           az rest --method PATCH \
             --url "https://management.azure.com/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${{ env.RESOURCE_GROUP }}/providers/Microsoft.App/containerApps/${{ env.BACKEND_APP_NAME }}?api-version=2023-05-01" \
-            --body @containerapp-backend.json
+            --body @containerapp-patch.json
 
       # 6. Frontend Container App 업데이트
       - name: Deploy Frontend to ACA
