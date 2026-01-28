@@ -31,9 +31,14 @@ public class JwtTokenProvider {
     }
 
     public String createToken(String userId, String userName) {
+        return createToken(userId, userName, "ROLE_USER");
+    }
+
+    public String createToken(String userId, String userName, String role) {
         Claims claims = Jwts.claims()
                 .subject(userId)
                 .add("userName", userName)
+                .add("role", role)
                 .build();
 
         Date now = new Date();
@@ -54,6 +59,22 @@ public class JwtTokenProvider {
                 .parseSignedClaims(token)
                 .getPayload()
                 .getSubject();
+    }
+
+    public String getRole(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+
+            Object role = claims.get("role");
+            return role != null ? role.toString() : "ROLE_USER";
+        } catch (Exception e) {
+            log.warn("Failed to extract role from token: {}", e.getMessage());
+            return "ROLE_USER";
+        }
     }
 
     public boolean validateToken(String token) {
