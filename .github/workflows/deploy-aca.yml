@@ -86,12 +86,40 @@ jobs:
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --output json)
           
-          # jq로 설정 정리: additionalPortMappings 제거, probes 추가, ingress 단순화
+          # jq로 설정 정리: 문제되는 속성 모두 제거, ingress 단순화, probes 추가
           UPDATED_CONFIG=$(echo "$CURRENT_CONFIG" | jq '
-            # 불필요한 읽기 전용 필드 제거
-            del(.id, .name, .type, .systemData, .identity.tenantId, .identity.principalId) |
+            # 불필요한 읽기 전용 필드 및 문제되는 속성 제거
+            del(
+              .id, 
+              .name, 
+              .type, 
+              .systemData,
+              .identity,
+              .properties.provisioningState,
+              .properties.runningStatus,
+              .properties.managedEnvironmentId,
+              .properties.environmentId,
+              .properties.latestRevisionName,
+              .properties.latestReadyRevisionName,
+              .properties.latestRevisionFqdn,
+              .properties.customDomainVerificationId,
+              .properties.outboundIpAddresses,
+              .properties.eventStreamEndpoint,
+              .properties.configuration.identitySettings,
+              .properties.configuration.runtime,
+              .properties.configuration.ingress.fqdn,
+              .properties.configuration.ingress.customDomains,
+              .properties.configuration.ingress.traffic,
+              .properties.configuration.ingress.additionalPortMappings,
+              .properties.configuration.ingress.stickySessions,
+              .properties.configuration.ingress.targetPortHttpScheme,
+              .properties.template.revisionSuffix,
+              .properties.template.terminationGracePeriodSeconds,
+              .properties.template.initContainers,
+              .properties.template.serviceBinds
+            ) |
             
-            # additionalPortMappings 제거 및 ingress 단순화
+            # ingress 단순화 (필수 필드만)
             .properties.configuration.ingress = {
               "external": true,
               "targetPort": 8080,
@@ -142,11 +170,10 @@ jobs:
           # JSON 파일로 저장
           echo "$UPDATED_CONFIG" > containerapp-backend.json
           
-          # 디버그: 설정 확인
-          echo "=== Ingress Configuration ==="
-          cat containerapp-backend.json | jq '.properties.configuration.ingress'
-          echo "=== Probes Configuration ==="
-          cat containerapp-backend.json | jq '.properties.template.containers[0].probes'
+          # 디버그: 최종 설정 구조 확인
+          echo "=== Final Configuration Structure ==="
+          cat containerapp-backend.json | jq 'keys'
+          cat containerapp-backend.json | jq '.properties | keys'
           
           # REST API로 업데이트 (az rest 사용)
           az rest --method PATCH \
