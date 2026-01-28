@@ -10,18 +10,13 @@ permissions:
   contents: read
 
 env:
-  RESOURCE_GROUP: "big_project" # 리소스 그룹 이름
-  
-  BACKEND_ACR: "bpback" # 백엔드 ACR 이름
-  FRONTEND_ACR: "bpfront" # 프론트엔드 ACR 이름   
-
-  # 백엔드 설정
+  RESOURCE_GROUP: "big_project"
+  BACKEND_ACR: "bpback"
+  FRONTEND_ACR: "bpfront"
   BACKEND_IMAGE_NAME: "backend"
-  BACKEND_APP_NAME: "bp-backend-app" 
-  
-  # 프론트엔드 설정
+  BACKEND_APP_NAME: "bp-backend-app"
   FRONTEND_IMAGE_NAME: "frontend"
-  FRONTEND_APP_NAME: "bp-frontend-app" 
+  FRONTEND_APP_NAME: "bp-frontend-app"
 
 jobs:
   build-and-deploy:
@@ -36,108 +31,48 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # 2. ACR 로그인
-      - name: ACR Login
-        run: |
-          az acr login --name ${{ env.BACKEND_ACR }}
-          az acr login --name ${{ env.FRONTEND_ACR }}
+      # 2. ACR 로그인 (Docker 로그인 방식)
+      - name: ACR Login for Backend
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.BACKEND_ACR }}.azurecr.io
+          username: ${{ secrets.BACKEND_ACR_USERNAME }}
+          password: ${{ secrets.BACKEND_ACR_PASSWORD }}
+
+      - name: ACR Login for Frontend
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.FRONTEND_ACR }}.azurecr.io
+          username: ${{ secrets.FRONTEND_ACR_USERNAME }}
+          password: ${{ secrets.FRONTEND_ACR_PASSWORD }}
 
       # 3. Backend 이미지 빌드 및 푸시
       - name: Build and Push Backend Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ env.BACKEND_ACR }}.azurecr.io/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
-          cache-from: type=registry,ref=${{ env.BACKEND_ACR }}.azurecr.io/${{ env.BACKEND_IMAGE_NAME }}:latest
-          cache-to: type=inline
+        run: |
+          docker build -t ${{ env.BACKEND_ACR }}.azurecr.io/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }} .
+          docker push ${{ env.BACKEND_ACR }}.azurecr.io/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
 
       # 4. Frontend 이미지 빌드 및 푸시
       - name: Build and Push Frontend Image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
-          push: true
-          tags: ${{ env.FRONTEND_ACR }}.azurecr.io/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
-          build-args: |
-             VITE_API_URL=https://${{ env.BACKEND_APP_NAME }}.wittymushroom-76c80f0d.centralindia.azurecontainerapps.io/api
-          cache-from: type=registry,ref=${{ env.FRONTEND_ACR }}.azurecr.io/${{ env.FRONTEND_IMAGE_NAME }}:latest
-          cache-to: type=inline
-
-      # 5. Backend Container App 업데이트
-      - name: Deploy Backend to ACA
-        uses: azure/container-apps-deploy-action@v1
-        with:
-          imageToDeploy: ${{ env.BACKEND_ACR }}.azurecr.io/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
-          containerAppName: ${{ env.BACKEND_APP_NAME }}
-          resourceGroup: ${{ env.RESOURCE_GROUP }}
-
-      # 5-1. Backend Startup Probe 설정 (가장 단순한 구조)
-      - name: Configure Backend Health Probes
         run: |
-          SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-          
-          # 현재 컨테이너 이미지와 환경변수 가져오기
-          CURRENT_IMAGE=$(az containerapp show \
-            --name ${{ env.BACKEND_APP_NAME }} \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --query "properties.template.containers[0].image" -o tsv)
-          
-          CURRENT_ENV=$(az containerapp show \
-            --name ${{ env.BACKEND_APP_NAME }} \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --query "properties.template.containers[0].env" -o json)
-          
-          # 가장 단순한 PATCH 요청 (ingress + probes + env만)
-          cat > containerapp-patch.json << EOF
-          {
-            "properties": {
-              "configuration": {
-                "ingress": {
-                  "external": true,
-                  "targetPort": 8080
-                }
-              },
-              "template": {
-                "containers": [
-                  {
-                    "name": "${{ env.BACKEND_APP_NAME }}",
-                    "image": "${CURRENT_IMAGE}",
-                    "env": ${CURRENT_ENV},
-                    "probes": [
-                      {
-                        "type": "startup",
-                        "httpGet": {
-                          "path": "/api/health",
-                          "port": 8080
-                        },
-                        "initialDelaySeconds": 60,
-                        "periodSeconds": 10,
-                        "failureThreshold": 5
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
-          EOF
-          
-          # 디버그 출력
-          echo "=== PATCH Request Body ==="
-          cat containerapp-patch.json | jq '.'
-          
-          # REST API로 업데이트
-          az rest --method PATCH \
-            --url "https://management.azure.com/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${{ env.RESOURCE_GROUP }}/providers/Microsoft.App/containerApps/${{ env.BACKEND_APP_NAME }}?api-version=2023-05-01" \
-            --body @containerapp-patch.json
+          docker build \
+            --build-arg VITE_API_URL=https://${{ env.BACKEND_APP_NAME }}.wittymushroom-76c80f0d.centralindia.azurecontainerapps.io/api \
+            -t ${{ env.FRONTEND_ACR }}.azurecr.io/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }} \
+            ./frontend
+          docker push ${{ env.FRONTEND_ACR }}.azurecr.io/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
 
-      # 6. Frontend Container App 업데이트
+      # 5. Backend Container App 업데이트 (이미지만)
+      - name: Deploy Backend to ACA
+        run: |
+          az containerapp update \
+            --name ${{ env.BACKEND_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ env.BACKEND_ACR }}.azurecr.io/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
+
+      # 6. Frontend Container App 업데이트 (이미지만)
       - name: Deploy Frontend to ACA
-        uses: azure/container-apps-deploy-action@v1
-        with:
-          imageToDeploy: ${{ env.FRONTEND_ACR }}.azurecr.io/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
-          containerAppName: ${{ env.FRONTEND_APP_NAME }}
-          resourceGroup: ${{ env.RESOURCE_GROUP }}
+        run: |
+          az containerapp update \
+            --name ${{ env.FRONTEND_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ env.FRONTEND_ACR }}.azurecr.io/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
