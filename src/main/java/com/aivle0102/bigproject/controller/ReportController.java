@@ -13,7 +13,7 @@ import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/report")
+@RequestMapping("/report")
 public class ReportController {
 
     private final AiReportService aiReportService;

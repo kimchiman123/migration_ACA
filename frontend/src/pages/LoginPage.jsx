@@ -21,9 +21,7 @@ const LoginPage = () => {
     const handleSocialLogin = (provider) => {
         sessionStorage.setItem('oauthFlow', 'login');
         localStorage.setItem('oauthFlow', 'login');
-        // 상대 경로를 사용하여 현재 도메인(http://20.197.14.81)을 자동으로 따르도록 설정
-        // Nginx의 location /oauth2/ 설정이 백엔드로 프록시 해줍니다.
-        window.location.assign(`/oauth2/authorization/${provider}`);
+        window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`;
     };
 
     const handleLogin = async () => {
@@ -141,7 +139,7 @@ const LoginPage = () => {
                                     닫기
                                 </button>
                                 <button
-                                    onClick={() => navigate('/reset-password')}
+                                    onClick={() => navigate('/find-password')}
                                     className="flex-1 py-3 rounded-2xl bg-[color:var(--accent)] text-[color:var(--accent-contrast)] font-semibold hover:bg-[color:var(--accent-strong)] transition"
                                 >
                                     비밀번호 재설정
@@ -284,3 +282,4 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+

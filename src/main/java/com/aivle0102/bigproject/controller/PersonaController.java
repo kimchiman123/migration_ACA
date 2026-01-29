@@ -1,9 +1,9 @@
 package com.aivle0102.bigproject.controller;
 
 import com.aivle0102.bigproject.dto.AgeGroupResult;
-import com.aivle0102.bigproject.dto.AiPersona;
 import com.aivle0102.bigproject.dto.MultiCountryRequest;
 import com.aivle0102.bigproject.dto.PersonaBatchRequest;
+import com.aivle0102.bigproject.domain.VirtualConsumer;
 import com.aivle0102.bigproject.service.PersonaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,20 +15,20 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/persona")
+@RequestMapping("/persona")
 public class PersonaController {
 
     private final PersonaService personaService;
 
-    //1. 레시피에 맞는 국가별 연령대 Top1 뽑기
+    //1. ?�시?�에 맞는 �??�??�령?� Top1 뽑기
     @PostMapping("/age-group")
     public List<AgeGroupResult> getTopAgeGroups(@RequestBody MultiCountryRequest request) {
         return personaService.selectTopAgeGroups(request.getRecipe(), request.getCountries());
     }
 
-    //2. 국가별 Top1 연령대의 AI 페르소나 각각 생성 배치
+    //2. �??�?Top1 ?�령?�??AI ?�르?�나 각각 ?�성 배치
     @PostMapping("/batch")
-    public List<AiPersona> generatePersonas(@RequestBody PersonaBatchRequest request) {
+    public List<VirtualConsumer> generatePersonas(@RequestBody PersonaBatchRequest request) {
         return personaService.generatePersonas(request.getRecipeSummary(), request.getTargets());
     }
 }
