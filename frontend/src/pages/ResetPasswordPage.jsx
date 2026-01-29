@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { KeyRound, Mail, User, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
