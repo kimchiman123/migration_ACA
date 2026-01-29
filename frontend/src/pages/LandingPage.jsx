@@ -87,6 +87,11 @@ const LandingPage = () => {
                     <br />
                     빈레시피
                 </motion.h1>
+                {/* <p className="text-xl text-[color:var(--text-muted)] max-w-2xl mx-auto mb-12 leading-relaxed">
+                    빈수레의
+                    <br />
+                    빈레시피
+                </p> */}
             </div>
 
             <div className="absolute bottom-0 left-0 right-0">

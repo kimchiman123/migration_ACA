@@ -34,7 +34,8 @@ public class PasswordResetCodeService {
     public PasswordResetCodeService(
             UserInfoRepository userInfoRepository,
             @Qualifier("gmailMailSender") JavaMailSender gmailMailSender,
-            @Qualifier("naverMailSender") JavaMailSender naverMailSender) {
+            @Qualifier("naverMailSender") JavaMailSender naverMailSender
+    ) {
         this.userInfoRepository = userInfoRepository;
         this.gmailMailSender = gmailMailSender;
         this.naverMailSender = naverMailSender;
@@ -118,3 +119,4 @@ public class PasswordResetCodeService {
     private record CodeEntry(String code, Instant expiresAt) {
     }
 }
+

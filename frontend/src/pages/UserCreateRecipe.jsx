@@ -29,7 +29,11 @@ const labels = {
     stepPlaceholderPrefix: '단계',
     ingredientsLabel: '재료',
     ingredientAdd: '재료 추가',
+    ingredientAutoAdd: '자동 추가',
+    ingredientAutoLoading: '추출 중...',
     ingredientPlaceholder: '재료명 / 용량',
+    ingredientAutoEmpty: '조리 단계를 먼저 입력해주세요.',
+    ingredientAutoFail: '재료 자동 추출에 실패했습니다.',
     guideTitle: '레시피 생성 안내',
     guideBody: '생성까지 2~3분정도 소요됩니다.',
     createLabel: '레시피 생성',
@@ -40,7 +44,44 @@ const labels = {
     confirmLeave: '작성 중인 내용이 사라집니다. 이동할까요?',
     targetCountry: '미국',
     targetPersona: '20~30대 직장인, 간편식 선호',
+    ingredientAutoHelpLabel: '자동 추가 안내',
+    ingredientAutoHelpDesc: '입력한 조리법에서 재료를 자동으로 추출하여 추가시켜줍니다.',
+    targetSectionLabel: '리포트 타겟 설정',
+    targetCountryLabel: '국가',
+    targetPersonaLabel: '페르소나',
+    priceRangeLabel: '가격대',
+    targetRecommendLabel: 'AI 추천',
+    targetRecommendLoading: '추천 중...',
+    targetRecommendError: '타겟 추천에 실패했습니다.',
 };
+
+const TARGET_COUNTRY_OPTIONS = [
+    { value: 'US', label: '미국' },
+    { value: 'JP', label: '일본' },
+    { value: 'CN', label: '중국' },
+    { value: 'FR', label: '프랑스' },
+    { value: 'DE', label: '독일' },
+    { value: 'PL', label: '폴란드' },
+    { value: 'IN', label: '인도' },
+    { value: 'VN', label: '베트남' },
+    { value: 'TH', label: '태국' },
+];
+
+const TARGET_PERSONA_OPTIONS = [
+    '20~30대 직장인, 간편식 선호',
+    '30~40대 맞벌이 가정, 건강 중시',
+    '10대/20대 학생, 트렌디한 맛 선호',
+    '40~50대 가족, 가성비 중시',
+    '해외 한식 입문자, 한국 맛 경험',
+    '건강/피트니스 관심층, 고단백/저당',
+];
+
+const PRICE_RANGE_OPTIONS = [
+    'USD 3~5',
+    'USD 6~9',
+    'USD 10~15',
+    'USD 15~20',
+];
 
 const UserCreateRecipe = () => {
     const { user } = useAuth();
@@ -64,12 +105,19 @@ const UserCreateRecipe = () => {
     const [createdInfluencerImage, setCreatedInfluencerImage] = useState('');
     const [showReview, setShowReview] = useState(false);
     const [hasUserEdits, setHasUserEdits] = useState(false);
+    const [targetCountry, setTargetCountry] = useState(TARGET_COUNTRY_OPTIONS[0].value);
+    const [targetPersona, setTargetPersona] = useState(TARGET_PERSONA_OPTIONS[0]);
+    const [priceRange, setPriceRange] = useState(PRICE_RANGE_OPTIONS[1]);
+    const [targetRecommendLoading, setTargetRecommendLoading] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [autoIngredientLoading, setAutoIngredientLoading] = useState(false);
     const [error, setError] = useState('');
     const [initializing, setInitializing] = useState(true);
     const initialSnapshotRef = useRef('');
     const shouldBlockRef = useRef(true);
     const fileInputRef = useRef(null);
+    const progressTimerRef = useRef(null);
 
     const buildSnapshot = (data) =>
         JSON.stringify({
@@ -93,6 +141,40 @@ const UserCreateRecipe = () => {
         setInitializing(false);
     };
 
+    const targetMetaKey = (recipeId) => `recipeTargetMeta:${recipeId}`;
+
+    const readTargetMeta = (recipeId) => {
+        const cached =
+            sessionStorage.getItem(targetMetaKey(recipeId)) ||
+            localStorage.getItem(targetMetaKey(recipeId));
+        if (!cached) {
+            return null;
+        }
+        try {
+            return JSON.parse(cached);
+        } catch (err) {
+            return null;
+        }
+    };
+
+    const applyTargetMeta = (meta) => {
+        if (!meta) {
+            setTargetCountry(TARGET_COUNTRY_OPTIONS[0].value);
+            setTargetPersona(TARGET_PERSONA_OPTIONS[0]);
+            setPriceRange(PRICE_RANGE_OPTIONS[1]);
+            return;
+        }
+        if (meta.targetCountry) {
+            setTargetCountry(meta.targetCountry);
+        }
+        if (meta.targetPersona) {
+            setTargetPersona(meta.targetPersona);
+        }
+        if (meta.priceRange) {
+            setPriceRange(meta.priceRange);
+        }
+    };
+
     useEffect(() => {
         const loadRecipe = async () => {
             if (!id) {
@@ -113,8 +195,11 @@ const UserCreateRecipe = () => {
         if (isEdit) {
             if (initialRecipe && String(initialRecipe.id) === String(id)) {
                 applyInitialState(initialRecipe);
+                applyTargetMeta(readTargetMeta(initialRecipe.id));
             } else {
-                loadRecipe();
+                loadRecipe().then(() => {
+                    applyTargetMeta(readTargetMeta(id));
+                });
             }
         } else if (reviewRecipeId) {
             const fetchReviewRecipe = async () => {
@@ -122,6 +207,7 @@ const UserCreateRecipe = () => {
                     setInitializing(true);
                     const res = await axiosInstance.get(`/recipes/${reviewRecipeId}`);
                     setCreatedRecipe(res.data);
+                    applyTargetMeta(readTargetMeta(reviewRecipeId));
                     setCreatedInfluencers(location.state?.influencers || []);
                     setCreatedInfluencerImage(location.state?.influencerImageBase64 || '');
                     setShowReview(true);
@@ -141,6 +227,7 @@ const UserCreateRecipe = () => {
             setCreatedInfluencerImage('');
             setShowReview(false);
             applyInitialState({});
+            applyTargetMeta(null);
         }
     }, [id, initialRecipe, isEdit, reviewRecipeId, location.state]);
 
@@ -171,6 +258,47 @@ const UserCreateRecipe = () => {
             sessionStorage.removeItem('recipeEditDirty');
         };
     }, []);
+
+    useEffect(() => {
+        return () => {
+            if (progressTimerRef.current) {
+                clearInterval(progressTimerRef.current);
+                progressTimerRef.current = null;
+            }
+        };
+    }, []);
+
+    const startProgress = () => {
+        setProgress(5);
+        if (progressTimerRef.current) {
+            clearInterval(progressTimerRef.current);
+        }
+        progressTimerRef.current = setInterval(() => {
+            setProgress((prev) => {
+                if (prev >= 90) {
+                    return prev;
+                }
+                return prev + 1;
+            });
+        }, 450);
+    };
+
+    const bumpProgress = (nextValue) => {
+        setProgress((prev) => Math.max(prev, nextValue));
+    };
+
+    const endProgress = (success) => {
+        if (progressTimerRef.current) {
+            clearInterval(progressTimerRef.current);
+            progressTimerRef.current = null;
+        }
+        if (success) {
+            setProgress(100);
+            setTimeout(() => setProgress(0), 500);
+            return;
+        }
+        setProgress(0);
+    };
 
     useBeforeUnload(
         React.useCallback(
@@ -211,6 +339,53 @@ const UserCreateRecipe = () => {
     const removeStep = (idx) => {
         setHasUserEdits(true);
         setSteps((prev) => prev.filter((_, i) => i !== idx));
+    };
+
+    const applyAutoIngredients = (items) => {
+        const incoming = (items || []).map((v) => v.trim()).filter(Boolean);
+        if (!incoming.length) {
+            setError(labels.ingredientAutoFail);
+            return;
+        }
+        setHasUserEdits(true);
+        setIngredients((prev) => {
+            const existing = prev.map((v) => v.trim()).filter(Boolean);
+            const seen = new Set(existing.map((v) => v.toLowerCase()));
+            const merged = [...existing];
+            incoming.forEach((item) => {
+                const key = item.toLowerCase();
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    merged.push(item);
+                }
+            });
+            return merged.length ? merged : [''];
+        });
+    };
+
+    const handleAutoAddIngredients = async () => {
+        setError('');
+        const stepInputs = steps.map((v) => v.trim()).filter(Boolean);
+        if (!stepInputs.length) {
+            setError(labels.ingredientAutoEmpty);
+            return;
+        }
+        setAutoIngredientLoading(true);
+        try {
+            try {
+            } catch (err) {
+                // ignore csrf refresh failures
+            }
+            const res = await axiosInstance.post('/ingredients/extract', {
+                steps: stepInputs,
+            });
+            applyAutoIngredients(res.data?.ingredients || []);
+        } catch (err) {
+            console.error('Failed to auto extract ingredients', err);
+            setError(labels.ingredientAutoFail);
+        } finally {
+            setAutoIngredientLoading(false);
+        }
     };
 
     const handleImageChange = (event) => {
@@ -254,6 +429,18 @@ const UserCreateRecipe = () => {
         }
     };
 
+    const HelpTooltip = ({ label, description }) => (
+        <span className="relative inline-flex items-center group ml-2 align-middle">
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[color:var(--border)] text-[10px] font-semibold text-[color:var(--text-muted)] bg-[color:var(--surface)]">
+                ?
+            </span>
+            <span className="sr-only">{label}</span>
+            <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2 text-xs text-[color:var(--text)] opacity-0 shadow-[0_12px_30px_var(--shadow)] transition group-hover:opacity-100">
+                {description}
+            </span>
+        </span>
+    );
+
     const safeCacheSet = (key, value) => {
         try {
             localStorage.setItem(key, value);
@@ -294,6 +481,7 @@ const UserCreateRecipe = () => {
         id: recipe?.id ?? null,
         title: recipe?.title ?? '',
         summary: recipe?.summary ?? '',
+        createdAt: recipe?.createdAt ?? '',
     });
 
     const readInfluencerMeta = (recipeId) => {
@@ -313,7 +501,8 @@ const UserCreateRecipe = () => {
     const isInfluencerMetaMatch = (meta, recipe) =>
         Boolean(meta) &&
         meta.title === (recipe?.title ?? '') &&
-        meta.summary === (recipe?.summary ?? '');
+        meta.summary === (recipe?.summary ?? '') &&
+        meta.createdAt === (recipe?.createdAt ?? '');
 
     const clearInfluencerCache = (recipeId) => {
         safeSessionRemove(`recipeInfluencers:${recipeId}`);
@@ -350,15 +539,15 @@ const UserCreateRecipe = () => {
         try {
             const payload = {
                 recipe: recipe.title,
-                targetCountry: labels.targetCountry,
-                targetPersona: labels.targetPersona,
-                priceRange: 'USD 6~9',
+                targetCountry,
+                targetPersona,
+                priceRange,
             };
             const influencerRes = await axiosInstance.post('/influencers/recommend', payload);
             const recs = influencerRes.data?.recommendations ?? [];
             if (!recs.length) {
                 setError(labels.influencerError);
-                return false;
+                return true;
             }
             setCreatedInfluencers(recs);
             const influencersJson = JSON.stringify(recs);
@@ -382,17 +571,17 @@ const UserCreateRecipe = () => {
                     safeCacheSet(`recipeInfluencerImage:${recipe.id}`, imageRes.data.imageBase64);
                 } else {
                     setError(labels.influencerError);
-                    return false;
+                    return true;
                 }
             } else {
                 setError(labels.influencerError);
-                return false;
+                return true;
             }
             return true;
         } catch (err) {
             console.error('Influencer generation failed', err);
             setError(labels.influencerError);
-            return false;
+            return true;
         }
     };
 
@@ -416,14 +605,20 @@ const UserCreateRecipe = () => {
             ingredients: ingredients.map((i) => i.trim()).filter(Boolean),
             steps: steps.map((s) => s.trim()).filter(Boolean),
             imageBase64: imageBase64 || '',
-            targetCountry: labels.targetCountry,
-            targetPersona: labels.targetPersona,
-            priceRange: 'USD 6~9',
+            targetCountry,
+            targetPersona,
+            priceRange,
             draft: true,
             regenerateReport: shouldRegenerate,
         };
         setLoading(true);
+        startProgress();
+        let success = false;
         try {
+            try {
+            } catch (err) {
+                // ignore csrf refresh failures
+            }
             if (shouldRegenerate && recipeId) {
                 clearInfluencerCache(recipeId);
                 setCreatedInfluencers([]);
@@ -433,24 +628,37 @@ const UserCreateRecipe = () => {
                 ? await axiosInstance.put(`/recipes/${recipeId}`, payload)
                 : await axiosInstance.post('/recipes', payload);
             const created = res.data;
+            bumpProgress(isUpdate ? 60 : 55);
             initialSnapshotRef.current = buildSnapshot(created || payload);
             shouldBlockRef.current = false;
             sessionStorage.removeItem('recipeEditDirty');
 
             if (isCreateFlow && shouldRegenerate) {
+                bumpProgress(70);
                 const influencerOk = await generateInfluencerAssets(created);
                 if (!influencerOk) {
                     return;
                 }
+                bumpProgress(85);
             }
 
             if (isCreateFlow) {
                 setCreatedRecipe(created);
+                const metaJson = JSON.stringify({ targetCountry, targetPersona, priceRange });
+                safeSessionSet(targetMetaKey(created.id), metaJson);
+                safeCacheSet(targetMetaKey(created.id), metaJson);
                 setShowReview(true);
                 setError('');
+                success = true;
                 return;
             }
 
+            success = true;
+            if (created?.id) {
+                const metaJson = JSON.stringify({ targetCountry, targetPersona, priceRange });
+                safeSessionSet(targetMetaKey(created.id), metaJson);
+                safeCacheSet(targetMetaKey(created.id), metaJson);
+            }
             navigate(`/mainboard/recipes/${created.id}`);
         } catch (err) {
             console.error('Failed to create recipe', err);
@@ -460,6 +668,7 @@ const UserCreateRecipe = () => {
                 setError(err.response?.data?.message || labels.createError);
             }
         } finally {
+            endProgress(success);
             setLoading(false);
         }
     };
@@ -476,6 +685,49 @@ const UserCreateRecipe = () => {
     const isEditingMode = Boolean(id || createdRecipe?.id);
     const sectionLabel = isEdit ? '레시피 수정' : labels.sectionLabel;
     const pageTitle = isEdit ? '등록된 레시피 수정' : labels.pageTitle;
+
+    const canRecommendTargets = useMemo(() => {
+        if (!title.trim() || !description.trim()) {
+            return false;
+        }
+        if (!ingredients.length || !steps.length) {
+            return false;
+        }
+        const allIngredientsFilled = ingredients.every((item) => item.trim());
+        const allStepsFilled = steps.every((item) => item.trim());
+        return allIngredientsFilled && allStepsFilled;
+    }, [description, ingredients, steps, title]);
+
+    const handleRecommendTargets = async () => {
+        if (!canRecommendTargets || targetRecommendLoading) {
+            return;
+        }
+        setError('');
+        setTargetRecommendLoading(true);
+        try {
+            const res = await axiosInstance.post('/recipes/recommend-targets', {
+                title,
+                description,
+                ingredients: ingredients.map((i) => i.trim()).filter(Boolean),
+                steps: steps.map((s) => s.trim()).filter(Boolean),
+            });
+            const data = res.data || {};
+            if (data.targetCountry) {
+                setTargetCountry(data.targetCountry);
+            }
+            if (data.targetPersona) {
+                setTargetPersona(data.targetPersona);
+            }
+            if (data.priceRange) {
+                setPriceRange(data.priceRange);
+            }
+        } catch (err) {
+            console.error('Failed to recommend targets', err);
+            setError(labels.targetRecommendError);
+        } finally {
+            setTargetRecommendLoading(false);
+        }
+    };
 
     return (
         <div className="relative">
@@ -598,24 +850,24 @@ const UserCreateRecipe = () => {
                                     <div className="space-y-3">
                                         <input
                                             type="text"
-                                            placeholder={labels.titlePlaceholder}
-                                            value={title}
-                                            onChange={(e) => {
-                                                setHasUserEdits(true);
-                                                setTitle(e.target.value);
-                                            }}
-                                            className="w-full p-3 rounded-xl bg-[color:var(--surface-muted)] border border-[color:var(--border)] text-[color:var(--text)] placeholder:text-[color:var(--text-soft)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]"
-                                        />
-                                        <textarea
-                                            rows="4"
-                                            placeholder={labels.descriptionPlaceholder}
-                                            value={description}
-                                            onChange={(e) => {
-                                                setHasUserEdits(true);
-                                                setDescription(e.target.value);
-                                            }}
-                                            className="w-full p-3 rounded-xl bg-[color:var(--surface-muted)] border border-[color:var(--border)] text-[color:var(--text)] placeholder:text-[color:var(--text-soft)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]"
-                                        />
+                                    placeholder={labels.titlePlaceholder}
+                                    value={title}
+                                    onChange={(e) => {
+                                        setHasUserEdits(true);
+                                        setTitle(e.target.value);
+                                    }}
+                                    className="w-full p-3 rounded-xl bg-[color:var(--surface-muted)] border border-[color:var(--border)] text-[color:var(--text)] placeholder:text-[color:var(--text-soft)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]"
+                                />
+                                <textarea
+                                    rows="4"
+                                    placeholder={labels.descriptionPlaceholder}
+                                    value={description}
+                                    onChange={(e) => {
+                                        setHasUserEdits(true);
+                                        setDescription(e.target.value);
+                                    }}
+                                    className="w-full p-3 rounded-xl bg-[color:var(--surface-muted)] border border-[color:var(--border)] text-[color:var(--text)] placeholder:text-[color:var(--text-soft)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]"
+                                />
                                     </div>
                                 </div>
 
@@ -690,17 +942,105 @@ const UserCreateRecipe = () => {
                                 </div>
                             </div>
 
-                            <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface)] shadow-[0_12px_30px_var(--shadow)] p-6 space-y-5">
+                            <div className="flex flex-col gap-6">
+                                <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface)] shadow-[0_12px_30px_var(--shadow)] p-6 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-lg font-semibold text-[color:var(--text)]">{labels.targetSectionLabel}</h3>
+                                        <button
+                                            type="button"
+                                            onClick={handleRecommendTargets}
+                                            disabled={!canRecommendTargets || targetRecommendLoading}
+                                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[color:var(--surface-muted)] border border-[color:var(--border)] text-xs text-[color:var(--text)] disabled:opacity-60"
+                                        >
+                                            {targetRecommendLoading ? labels.targetRecommendLoading : labels.targetRecommendLabel}
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-[color:var(--text-muted)] mb-2">
+                                                {labels.targetCountryLabel}
+                                            </label>
+                                            <select
+                                                value={targetCountry}
+                                                onChange={(e) => {
+                                                    setHasUserEdits(true);
+                                                    setTargetCountry(e.target.value);
+                                                }}
+                                                className="w-full p-3 rounded-xl bg-[color:var(--surface-muted)] border border-[color:var(--border)] text-[color:var(--text)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]"
+                                            >
+                                                {TARGET_COUNTRY_OPTIONS.map((opt) => (
+                                                    <option key={opt.value} value={opt.value}>
+                                                        {opt.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-[color:var(--text-muted)] mb-2">
+                                                {labels.targetPersonaLabel}
+                                            </label>
+                                            <select
+                                                value={targetPersona}
+                                                onChange={(e) => {
+                                                    setHasUserEdits(true);
+                                                    setTargetPersona(e.target.value);
+                                                }}
+                                                className="w-full p-3 rounded-xl bg-[color:var(--surface-muted)] border border-[color:var(--border)] text-[color:var(--text)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]"
+                                            >
+                                                {TARGET_PERSONA_OPTIONS.map((opt) => (
+                                                    <option key={opt} value={opt}>
+                                                        {opt}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-[color:var(--text-muted)] mb-2">
+                                                {labels.priceRangeLabel}
+                                            </label>
+                                            <select
+                                                value={priceRange}
+                                                onChange={(e) => {
+                                                    setHasUserEdits(true);
+                                                    setPriceRange(e.target.value);
+                                                }}
+                                                className="w-full p-3 rounded-xl bg-[color:var(--surface-muted)] border border-[color:var(--border)] text-[color:var(--text)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]"
+                                            >
+                                                {PRICE_RANGE_OPTIONS.map((opt) => (
+                                                    <option key={opt} value={opt}>
+                                                        {opt}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface)] shadow-[0_12px_30px_var(--shadow)] p-6 space-y-5">
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-lg font-semibold text-[color:var(--text)]">{labels.ingredientsLabel}</h3>
-                                    <button
-                                        type="button"
-                                        onClick={addIngredient}
-                                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[color:var(--surface-muted)] border border-[color:var(--border)] text-xs text-[color:var(--text)]"
-                                    >
-                                        <Plus size={14} />
-                                        {labels.ingredientAdd}
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={handleAutoAddIngredients}
+                                            disabled={autoIngredientLoading}
+                                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[color:var(--surface-muted)] border border-[color:var(--border)] text-xs text-[color:var(--text)] disabled:opacity-60"
+                                        >
+                                            {autoIngredientLoading ? labels.ingredientAutoLoading : labels.ingredientAutoAdd}
+                                        </button>
+                                        <HelpTooltip
+                                            label={labels.ingredientAutoHelpLabel}
+                                            description={labels.ingredientAutoHelpDesc}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={addIngredient}
+                                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[color:var(--surface-muted)] border border-[color:var(--border)] text-xs text-[color:var(--text)]"
+                                        >
+                                            <Plus size={14} />
+                                            {labels.ingredientAdd}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="space-y-3">
@@ -733,14 +1073,22 @@ const UserCreateRecipe = () => {
                                     </div>
                                 )}
 
-                                <button
-                                    type="button"
-                                    onClick={handleSubmit}
-                                    disabled={loading}
-                                    className="w-full py-3 rounded-xl bg-[color:var(--accent)] text-[color:var(--accent-contrast)] font-semibold hover:bg-[color:var(--accent-strong)] transition shadow-[0_10px_30px_var(--shadow)] disabled:opacity-60"
-                                >
-                                    {loading ? (isEditingMode ? labels.updatingLabel : labels.creatingLabel) : isEditingMode ? labels.updateLabel : labels.createLabel}
-                                </button>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={handleSubmit}
+                                        disabled={loading}
+                                        className="flex-1 py-3 rounded-xl bg-[color:var(--accent)] text-[color:var(--accent-contrast)] font-semibold hover:bg-[color:var(--accent-strong)] transition shadow-[0_10px_30px_var(--shadow)] disabled:opacity-60"
+                                    >
+                                        {loading ? (isEditingMode ? labels.updatingLabel : labels.creatingLabel) : isEditingMode ? labels.updateLabel : labels.createLabel}
+                                    </button>
+                                    {loading && (
+                                        <div className="flex items-center gap-2 text-xs text-[color:var(--text-muted)]">
+                                            <span className="h-4 w-4 rounded-full border-2 border-[color:var(--border)] border-t-[color:var(--accent)] animate-spin" />
+                                            <span>{progress}%</span>
+                                        </div>
+                                    )}
+                                </div>
                                 {isEdit && (
                                     <button
                                         type="button"
@@ -759,6 +1107,7 @@ const UserCreateRecipe = () => {
                                         {labels.cancelLabel}
                                     </button>
                                 )}
+                                </div>
                             </div>
                         </>
                     )}

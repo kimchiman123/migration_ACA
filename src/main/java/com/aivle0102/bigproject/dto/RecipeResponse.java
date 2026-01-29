@@ -1,5 +1,6 @@
 package com.aivle0102.bigproject.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -17,11 +18,12 @@ public class RecipeResponse {
     private List<String> steps;
     private String imageBase64;
     private Map<String, Object> report;
+    private Map<String, Object> allergen;
     private String summary;
     private List<Map<String, Object>> influencers;
     private String influencerImageBase64;
     private String status;
-    private String authorId;
-    private String authorName;
+    private String userId;
+    private String userName;
     private LocalDateTime createdAt;
 }

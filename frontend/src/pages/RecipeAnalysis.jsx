@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../axiosConfig';
@@ -19,6 +19,28 @@ const RecipeAnalysis = () => {
     const [imageBase64, setImageBase64] = useState('');
     const [influencerLoading, setInfluencerLoading] = useState(false);
     const [publishLoading, setPublishLoading] = useState(false);
+    const [mapError, setMapError] = useState('');
+    const [mapReady, setMapReady] = useState(false);
+    const mapRef = useRef(null);
+    const mapInstanceRef = useRef(null);
+    const mapMarkersRef = useRef([]);
+    const mapInfoWindowRef = useRef(null);
+    const personaRunRef = useRef(null);
+    const [evaluationResults, setEvaluationResults] = useState([]);
+    const targetMetaKey = (recipeId) => `recipeTargetMeta:${recipeId}`;
+    const readTargetMeta = (recipeId) => {
+        const cached =
+            sessionStorage.getItem(targetMetaKey(recipeId)) ||
+            localStorage.getItem(targetMetaKey(recipeId));
+        if (!cached) {
+            return null;
+        }
+        try {
+            return JSON.parse(cached);
+        } catch (err) {
+            return null;
+        }
+    };
 
     const influencerMetaKey = (recipeId) => `recipeInfluencerMeta:${recipeId}`;
     const readInfluencerMeta = (recipeId) => {
@@ -38,6 +60,7 @@ const RecipeAnalysis = () => {
         Boolean(meta) &&
         meta.title === (currentRecipe?.title ?? '') &&
         meta.summary === (currentRecipe?.summary ?? '');
+
     useEffect(() => {
         const fetchRecipe = async () => {
             try {
@@ -71,11 +94,79 @@ const RecipeAnalysis = () => {
     const report = recipe?.report || null;
 
     useEffect(() => {
+        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+        if (!apiKey) {
+            setMapError('Google Maps API key is missing.');
+            return;
+        }
+
+        const initMap = (retry = 0) => {
+            if (!mapRef.current) {
+                if (retry < 10) {
+                    setTimeout(() => initMap(retry + 1), 100);
+                } else {
+                    setMapError('Failed to initialize the map.');
+                }
+                return;
+            }
+            if (!window.google?.maps) {
+                if (retry < 20) {
+                    setTimeout(() => initMap(retry + 1), 150);
+                } else {
+                    setMapError('Google Maps failed to load. Check API key and settings.');
+                }
+                return;
+            }
+            setMapError('');
+            const map = new window.google.maps.Map(mapRef.current, {
+                center: { lat: 20, lng: 0 },
+                zoom: 1,
+                minZoom: 1,
+                maxZoom: 8,
+                disableDefaultUI: false,
+                gestureHandling: 'greedy',
+                scrollwheel: true,
+                styles: [
+                    { featureType: 'administrative', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+                    { featureType: 'poi', elementType: 'all', stylers: [{ visibility: 'off' }] },
+                    { featureType: 'road', elementType: 'all', stylers: [{ visibility: 'off' }] },
+                ],
+            });
+            mapInstanceRef.current = map;
+            setMapReady(true);
+        };
+
+        const existing = document.querySelector('script[data-google-maps]');
+        if (existing) {
+            if (window.google?.maps) {
+                initMap();
+            } else {
+                existing.addEventListener('load', () => initMap(), { once: true });
+                existing.addEventListener('error', () => setMapError('Google Maps script failed to load.'), { once: true });
+                initMap();
+            }
+            return;
+        }
+
+        window.__initRecipeMap = () => initMap();
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=weekly&callback=__initRecipeMap`;
+        script.async = true;
+        script.defer = true;
+        script.dataset.googleMaps = 'true';
+        script.onerror = () => setMapError('Google Maps script failed to load.');
+        document.body.appendChild(script);
+    }, []);
+
+    useEffect(() => {
         if (Array.isArray(recipe?.influencers) && recipe.influencers.length) {
             setInfluencers(recipe.influencers);
         }
         if (recipe?.influencerImageBase64) {
             setImageBase64(recipe.influencerImageBase64);
+        }
+        if (Array.isArray(recipe?.report?.evaluationResults) && recipe.report.evaluationResults.length) {
+            setEvaluationResults(aggregateEvaluations(recipe.report.evaluationResults));
         }
     }, [recipe]);
 
@@ -129,11 +220,12 @@ const RecipeAnalysis = () => {
             }
             setInfluencerLoading(true);
             try {
+                const targetMeta = readTargetMeta(recipe.id) || {};
                 const payload = {
                     recipe: recipe.title,
-                    targetCountry: '미국',
-                    targetPersona: '20~30대 직장인, 간편식 선호',
-                    priceRange: 'USD 6~9',
+                    targetCountry: targetMeta.targetCountry || 'US',
+                    targetPersona: targetMeta.targetPersona || '20~30대 직장인, 간편식 선호',
+                    priceRange: targetMeta.priceRange || 'USD 6~9',
                 };
                 const influencerRes = await axiosInstance.post('/influencers/recommend', payload);
                 const recs = influencerRes.data?.recommendations ?? [];
@@ -190,9 +282,262 @@ const RecipeAnalysis = () => {
         fetchInfluencers();
     }, [imageBase64, influencers.length, recipe]);
 
+    const countryCoords = useMemo(
+        () => ({
+            '미국': { lat: 39.8283, lng: -98.5795 },
+            '한국': { lat: 36.5, lng: 127.9 },
+            '일본': { lat: 36.2048, lng: 138.2529 },
+            '중국': { lat: 35.8617, lng: 104.1954 },
+            '영국': { lat: 55.3781, lng: -3.436 },
+            '프랑스': { lat: 46.2276, lng: 2.2137 },
+            '독일': { lat: 51.1657, lng: 10.4515 },
+            '캐나다': { lat: 56.1304, lng: -106.3468 },
+            '호주': { lat: -25.2744, lng: 133.7751 },
+            '인도': { lat: 20.5937, lng: 78.9629 },
+            'United States': { lat: 39.8283, lng: -98.5795 },
+            'South Korea': { lat: 36.5, lng: 127.9 },
+            'Japan': { lat: 36.2048, lng: 138.2529 },
+            'China': { lat: 35.8617, lng: 104.1954 },
+            'United Kingdom': { lat: 55.3781, lng: -3.436 },
+            'France': { lat: 46.2276, lng: 2.2137 },
+            'Germany': { lat: 51.1657, lng: 10.4515 },
+            'Canada': { lat: 56.1304, lng: -106.3468 },
+            'Australia': { lat: -25.2744, lng: 133.7751 },
+            'India': { lat: 20.5937, lng: 78.9629 },
+        }),
+        []
+    );
+
+    const clearMapMarkers = () => {
+        mapMarkersRef.current.forEach((marker) => marker.setMap(null));
+        mapMarkersRef.current = [];
+    };
+
+    const escapeMapHtml = (value) =>
+        String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+    const aggregateEvaluations = (items) => {
+        if (!Array.isArray(items) || items.length === 0) {
+            return [];
+        }
+        if (items.some((item) => Array.isArray(item?.feedbacks))) {
+            return items;
+        }
+        const byCountry = new Map();
+        items.forEach((item) => {
+            const country = item?.country;
+            if (!country) {
+                return;
+            }
+            const entry = byCountry.get(country) || {
+                country,
+                totalScoreSum: 0,
+                totalScoreCount: 0,
+                feedbacks: [],
+            };
+            if (Number.isFinite(item?.totalScore)) {
+                entry.totalScoreSum += item.totalScore;
+                entry.totalScoreCount += 1;
+            }
+            if (entry.feedbacks.length < 10 && (item?.positiveFeedback || item?.negativeFeedback)) {
+                entry.feedbacks.push({
+                    personaName: item?.personaName || '심사위원',
+                    positiveFeedback: item?.positiveFeedback || '',
+                    negativeFeedback: item?.negativeFeedback || '',
+                });
+            }
+            byCountry.set(country, entry);
+        });
+        return Array.from(byCountry.values()).map((entry) => ({
+            country: entry.country,
+            totalScore:
+                entry.totalScoreCount > 0
+                    ? Math.round(entry.totalScoreSum / entry.totalScoreCount)
+                    : 0,
+            feedbacks: entry.feedbacks,
+        }));
+    };
+
+    const ensureMapInfoStyles = () => {
+        if (document.getElementById('map-info-style')) {
+            return;
+        }
+        const style = document.createElement('style');
+        style.id = 'map-info-style';
+        style.textContent = `
+            .gm-style-iw,
+            .gm-style-iw-c {
+                padding: 0 !important;
+            }
+            .gm-style-iw-d {
+                overflow: visible !important;
+                padding-top: 0 !important;
+                margin-top: 0 !important;
+            }
+            .gm-ui-hover-effect {
+                display: none !important;
+            }
+        `;
+        document.head.appendChild(style);
+    };
+
+    const normalizeCountryKey = (value) => {
+        if (!value) return '';
+        const key = String(value).trim();
+        const map = {
+            'US': '미국',
+            'USA': '미국',
+            'UK': '영국',
+            'UAE': '아랍에미리트',
+            'KOREA': '한국',
+            'SOUTH KOREA': '한국',
+            'JAPAN': '일본',
+            'CHINA': '중국',
+            'UNITED STATES': '미국',
+            'UNITED KINGDOM': '영국',
+            'FRANCE': '프랑스',
+            'GERMANY': '독일',
+            'CANADA': '캐나다',
+            'AUSTRALIA': '호주',
+            'INDIA': '인도',
+        };
+        const upper = key.toUpperCase();
+        return map[upper] || key;
+    };
+
+    const plotEvaluations = (evaluations) => {
+        const map = mapInstanceRef.current;
+        if (!map || !Array.isArray(evaluations)) {
+            return;
+        }
+        ensureMapInfoStyles();
+        const infoWindow = mapInfoWindowRef.current || new window.google.maps.InfoWindow();
+        mapInfoWindowRef.current = infoWindow;
+        clearMapMarkers();
+        evaluations.forEach((item) => {
+            const coord = countryCoords[normalizeCountryKey(item.country)];
+            if (!coord) {
+                return;
+            }
+            const marker = new window.google.maps.Marker({
+                map,
+                position: coord,
+                label: {
+                    text: String(item.totalScore ?? ''),
+                    color: '#f8fafc',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                },
+                icon: {
+                    path: window.google.maps.SymbolPath.CIRCLE,
+                    scale: 10,
+                    fillColor: '#f97316',
+                    fillOpacity: 0.9,
+                    strokeColor: '#0f172a',
+                    strokeWeight: 2,
+                },
+            });
+            marker.addListener('click', () => {
+                const country = escapeMapHtml(item.country || '국가');
+                const feedbacks = Array.isArray(item.feedbacks) ? item.feedbacks.slice(0, 10) : [];
+                window.__closeMapInfoWindow = () => infoWindow.close();
+                const feedbackHtml = feedbacks.length
+                    ? feedbacks
+                        .map((fb) => {
+                            const name = escapeMapHtml(fb?.personaName || '심사위원');
+                            const positive = escapeMapHtml(fb?.positiveFeedback || '내용 없음');
+                            const negative = escapeMapHtml(fb?.negativeFeedback || '내용 없음');
+                            return `
+                                <div style="margin-top:8px;color:#111827;">
+                                    <div style="font-weight:700;color:#111827;">심사위원: ${name}</div>
+                                    <div style="font-size:12px;color:#111827;"><strong>긍정:</strong> ${positive}</div>
+                                    <div style="font-size:12px;color:#111827;"><strong>부정:</strong> ${negative}</div>
+                                </div>
+                            `;
+                        })
+                        .join('')
+                    : '<div style="font-size:12px;color:#111827;">피드백 없음</div>';
+                const content = `
+                    <div style="min-width:240px;max-width:320px;color:#111827;padding:0 36px 10px 12px;margin:0;position:relative;">
+                        <button
+                            type="button"
+                            onclick="window.__closeMapInfoWindow && window.__closeMapInfoWindow()"
+                            style="position:absolute;top:-6px;right:8px;border:0;background:transparent;font-size:22px;line-height:1;color:#6b7280;cursor:pointer;padding:0 6px;"
+                            aria-label="닫기"
+                        >
+                            ×
+                        </button>
+                        <div style="font-weight:800;margin:0 0 4px 0;color:#111827;">${country}</div>
+                        <div style="font-size:12px;line-height:1.5;color:#111827;">${feedbackHtml}</div>
+                    </div>
+                `;
+                infoWindow.setContent(content);
+                infoWindow.open({ map, anchor: marker });
+            });
+            mapMarkersRef.current.push(marker);
+        });
+    };
+
+    useEffect(() => {
+        if (!mapReady || evaluationResults.length === 0) {
+            return;
+        }
+        plotEvaluations(evaluationResults);
+    }, [mapReady, evaluationResults]);
+
+    useEffect(() => {
+        const runPersonaEvaluation = async () => {
+            if (!recipe || !report || !mapReady) {
+                return;
+            }
+            if (evaluationResults.length > 0) {
+                return;
+            }
+            if (personaRunRef.current === recipe.id) {
+                return;
+            }
+            personaRunRef.current = recipe.id;
+            try {
+                const countries = Object.keys(countryCoords)
+                    .filter((c) => /[가-힣]/.test(c))
+                    .slice(0, 10);
+                const ageRes = await axiosInstance.post('/persona/age-group', {
+                    recipe: `${recipe.title || ''} ${recipe.description || ''}`.trim(),
+                    countries,
+                });
+                const targets = ageRes.data || [];
+                const personaRes = await axiosInstance.post('/persona/batch', {
+                    recipeSummary: recipe.summary || JSON.stringify(report || {}),
+                    targets,
+                });
+                const personas = personaRes.data || [];
+                const evalRes = await axiosInstance.post('/evaluation', {
+                    personas,
+                    report: JSON.stringify(report || {}),
+                });
+                setEvaluationResults(aggregateEvaluations(evalRes.data || []));
+            } catch (err) {
+                console.error('Persona evaluation flow failed', err);
+            }
+        };
+
+        runPersonaEvaluation();
+    }, [recipe, report, mapReady, countryCoords]);
+
     const isOwner =
-        (userId && recipe?.authorId === userId) ||
-        (!userId && recipe?.authorName && recipe.authorName === rawName);
+        (userId &&
+            (recipe?.user_id === userId ||
+                recipe?.userId === userId ||
+                recipe?.authorId === userId)) ||
+        (!userId &&
+            (recipe?.user_name === rawName ||
+                recipe?.userName === rawName ||
+                recipe?.authorName === rawName));
 
     const handlePublish = async () => {
         if (!recipe || recipe.status !== 'DRAFT') {
@@ -304,6 +649,11 @@ const RecipeAnalysis = () => {
   </div>
 
   <div class="section">
+    <h2>알레르기 성분 노트</h2>
+    <p>${escapeHtml(recipe?.allergen?.note || '알레르기 성분 요약이 없습니다.')}</p>
+  </div>
+
+  <div class="section">
     <h2>SWOT</h2>
     <h3>Strengths</h3>
     ${listHtml(swot.strengths)}
@@ -347,11 +697,12 @@ const RecipeAnalysis = () => {
 
   <div class="section">
     <h2>인플루언서 추천</h2>
-    ${influencers.length
-                ? influencers
-                    .slice(0, 5)
-                    .map(
-                        (inf) => `
+    ${
+        influencers.length
+            ? influencers
+                  .slice(0, 5)
+                  .map(
+                      (inf) => `
         <div>
           <p><strong>${escapeHtml(inf.name || '')}</strong> (${escapeHtml(inf.platform || '-')})</p>
           <p class="muted">${escapeHtml(inf.profileUrl || '')}</p>
@@ -359,18 +710,19 @@ const RecipeAnalysis = () => {
           ${inf.riskNotes ? `<p class="muted">주의: ${escapeHtml(inf.riskNotes)}</p>` : ''}
         </div>
       `
-                    )
-                    .join('')
-                : '<p class="muted">추천 결과가 없습니다.</p>'
-            }
+                  )
+                  .join('')
+            : '<p class="muted">추천 결과가 없습니다.</p>'
+    }
   </div>
 
   <div class="section">
     <h2>인플루언서 이미지</h2>
-    ${imageBase64
-                ? `<img src="data:image/png;base64,${imageBase64}" alt="influencer" style="max-width:100%; border-radius:12px;"/>`
-                : '<p class="muted">이미지 생성 결과가 없습니다.</p>'
-            }
+    ${
+        imageBase64
+            ? `<img src="data:image/png;base64,${imageBase64}" alt="influencer" style="max-width:100%; border-radius:12px;"/>`
+            : '<p class="muted">이미지 생성 결과가 없습니다.</p>'
+    }
   </div>
 </body>
 </html>`;
@@ -437,6 +789,18 @@ const RecipeAnalysis = () => {
             </ul>
         );
     };
+    const HelpTooltip = ({ label, description }) => (
+        <span className="relative inline-flex items-center group ml-2 align-middle">
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[color:var(--border)] text-[10px] font-semibold text-[color:var(--text-muted)] bg-[color:var(--surface)]">
+                ?
+            </span>
+            <span className="sr-only">{label}</span>
+            <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-56 -translate-x-1/2 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2 text-xs text-[color:var(--text)] opacity-0 shadow-[0_12px_30px_var(--shadow)] transition group-hover:opacity-100">
+                {description}
+            </span>
+        </span>
+    );
+
 
     if (loading) {
         return (
@@ -483,6 +847,21 @@ const RecipeAnalysis = () => {
                 )}
 
                 <div className="mt-8 grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-6">
+                    <div className="lg:col-span-2 rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface)] shadow-[0_12px_30px_var(--shadow)] p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-[color:var(--text)]">Global Market Map</h3>
+                            <span className="text-xs text-[color:var(--text-soft)]">World View</span>
+                        </div>
+                        <div className="h-[260px] rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-muted)] overflow-hidden">
+                            {mapError ? (
+                                <div className="h-full flex items-center justify-center text-sm text-[color:var(--text-muted)]">
+                                    {mapError}
+                                </div>
+                            ) : (
+                                <div ref={mapRef} className="h-full w-full" />
+                            )}
+                        </div>
+                    </div>
                     <div className="space-y-6">
                         <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface)] shadow-[0_12px_30px_var(--shadow)] p-6">
                             <div className="flex items-center justify-between">
@@ -536,7 +915,13 @@ const RecipeAnalysis = () => {
                                 {renderList(risk.mitigations)}
                             </div>
                             <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface)] shadow-[0_12px_30px_var(--shadow)] p-6">
-                                <h3 className="text-lg font-semibold text-[color:var(--text)] mb-3">SWOT</h3>
+                                <h3 className="text-lg font-semibold text-[color:var(--text)] mb-3 flex items-center">
+                                SWOT
+                                <HelpTooltip
+                                    label="SWOT"
+                                    description="강점 Strength, 약점 Weakenesses, 기회 Opportunities, 위협 Threats을 정리해서 상황을 분석하는 방법입니다."
+                                />
+                            </h3>
                                 <p className="text-sm font-semibold text-[color:var(--text)] mb-2">Strengths</p>
                                 {renderList(swot.strengths)}
                                 <p className="mt-3 text-sm font-semibold text-[color:var(--text)] mb-2">Weaknesses</p>
@@ -567,7 +952,13 @@ const RecipeAnalysis = () => {
                         </div>
 
                         <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface)] shadow-[0_12px_30px_var(--shadow)] p-6">
-                            <h3 className="text-lg font-semibold text-[color:var(--text)] mb-4">KPI 제안</h3>
+                            <h3 className="text-lg font-semibold text-[color:var(--text)] mb-4 flex items-center">
+                                KPI 제안
+                                <HelpTooltip
+                                    label="KPI"
+                                    description="핵심 성과 지표로, 목표가 얼마나 달성됐는지 숫자로 확인하는 기준입니다."
+                                />
+                            </h3>
                             <div className="space-y-3">
                                 {kpis.length === 0 && (
                                     <p className="text-sm text-[color:var(--text-muted)]">내용이 없습니다.</p>
@@ -599,6 +990,13 @@ const RecipeAnalysis = () => {
                             </p>
                         </div>
 
+                        <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface)] shadow-[0_12px_30px_var(--shadow)] p-6">
+                            <h3 className="text-lg font-semibold text-[color:var(--text)] mb-3">알레르기 성분 노트</h3>
+                            <p className="text-sm text-[color:var(--text-muted)] whitespace-pre-line">
+                                {recipe.allergen?.note || '알레르기 성분 요약이 없습니다.'}
+                            </p>
+                        </div>
+                        
                         <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface)] shadow-[0_12px_30px_var(--shadow)] p-6">
                             <h3 className="text-lg font-semibold text-[color:var(--text)] mb-3">인플루언서 추천</h3>
                             {influencerLoading ? (
