@@ -2,161 +2,42 @@ name: Backend CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [ "main" ]
     paths:
       - 'src/**'
       - 'build.gradle'
-      - 'settings.gradle'
       - 'Dockerfile'
       - '.github/workflows/backend-ci.yml'
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - 'src/**'
-      - 'build.gradle'
-      - 'settings.gradle'
-
-# Required permissions for test-reporter
-permissions:
-  contents: read
-  actions: read
-  checks: write
 
 jobs:
-  build-and-test:
+  build:
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: testdb
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: 'gradle'
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Build with Gradle (skip tests)
-        run: ./gradlew build -x test --no-daemon
-
-      - name: Run tests
-        env:
-          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/testdb
-          SPRING_DATASOURCE_USERNAME: test
-          SPRING_DATASOURCE_PASSWORD: test
-          SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
-          JWT_SECRET: dGVzdC1zZWNyZXQta2V5LWZvci1jaS10ZXN0aW5nLXB1cnBvc2VzLW9ubHk=
-          # AI & External APIs (Dummy values for CI)
-          OPENAI_API_KEY: dummy-openai-key
-          SERPAPI_API_KEY: dummy-serpapi-key
-          HACCP_SERVICE_KEY: dummy-haccp-key
-          # Mail (Dummy values for CI)
-          MAIL_USERNAME: dummy@gmail.com
-          MAIL_PASSWORD: dummy-password
-          NAVER_MAIL_USERNAME: dummy@naver.com
-          NAVER_MAIL_PASSWORD: dummy-password
-          # OAuth (Dummy values for CI)
-          NAVER_CLIENT_ID: dummy-naver-id
-          NAVER_CLIENT_SECRET: dummy-naver-secret
-          KAKAO_CLIENT_ID: dummy-kakao-id
-          KAKAO_CLIENT_SECRET: dummy-kakao-secret
-        run: ./gradlew test --no-daemon
-
-      - name: Generate test report
-        if: always() && github.event_name != 'pull_request'
-        uses: dorny/test-reporter@v1
-        with:
-          name: Backend Test Results
-          path: build/test-results/test/*.xml
-          reporter: java-junit
-
-      - name: Upload test results (for PR)
-        if: always() && github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: build/test-results/test/*.xml
-          retention-days: 7
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-jar
-          path: build/libs/*.jar
-          retention-days: 7
-
-  docker-build:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'push' && 
-      github.ref == 'refs/heads/main' &&
-      vars.DOCKER_USERNAME != ''
-
-    steps:
-      - name: Check Docker Hub secrets
-        id: check-secrets
-        run: |
-          if [ -z "${{ secrets.DOCKER_USERNAME }}" ] || [ -z "${{ secrets.DOCKER_PASSWORD }}" ]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-            echo "⚠️ Docker Hub secrets not configured. Skipping docker build."
-          else
-            echo "skip=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Checkout code
-        if: steps.check-secrets.outputs.skip != 'true'
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        if: steps.check-secrets.outputs.skip != 'true'
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        if: steps.check-secrets.outputs.skip != 'true'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Extract metadata
-        if: steps.check-secrets.outputs.skip != 'true'
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ secrets.DOCKER_USERNAME }}/bigproject-backend
-          tags: |
-            type=ref,event=branch
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push Docker image
-        if: steps.check-secrets.outputs.skip != 'true'
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/bigproject-backend:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/bigproject-backend:buildcache,mode=max
+    - uses: actions/checkout@v3
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: Build and Test with Gradle
+      # src/test/resources/application.properties 덕분에 Secrets 없이도 테스트 통과 가능
+      # 하지만 통합 테스트를 위해 Secret 매핑도 유지
+      env:
+        OPENAI_API_KEY: ${{ secrets.BPBACKENDAPP_OPENAI_API_KEY }}
+        SERPAPI_API_KEY: ${{ secrets.BPBACKENDAPP_SERPAPI_API_KEY }}
+        HACCP_SERVICE_KEY: ${{ secrets.BPBACKENDAPP_HACCP_SERVICE_KEY }}
+        JWT_SECRET: ${{ secrets.BPBACKENDAPP_JWT_SECRET }}
+        MAIL_USERNAME: ${{ secrets.BPBACKENDAPP_MAIL_USERNAME }}
+        MAIL_PASSWORD: ${{ secrets.BPBACKENDAPP_MAIL_PASSWORD }}
+        NAVER_MAIL_USERNAME: ${{ secrets.BPBACKENDAPP_NAVER_MAIL_USERNAME }}
+        NAVER_MAIL_PASSWORD: ${{ secrets.BPBACKENDAPP_NAVER_MAIL_PASSWORD }}
+        SPRING_DATASOURCE_URL: ${{ secrets.BPBACKENDAPP_SPRING_DATASOURCE_URL }}
+        SPRING_DATASOURCE_USERNAME: ${{ secrets.BPBACKENDAPP_SPRING_DATASOURCE_USERNAME }}
+        SPRING_DATASOURCE_PASSWORD: ${{ secrets.BPBACKENDAPP_SPRING_DATASOURCE_PASSWORD }}
+      run: ./gradlew build
