@@ -7,6 +7,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class RecipeCaseRequest {
+    @JsonProperty("recipe_id")
     private Long recipeId;
     private String recipe;
 }

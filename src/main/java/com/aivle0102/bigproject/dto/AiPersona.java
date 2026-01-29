@@ -13,10 +13,10 @@ public class AiPersona {
     private String ageGroup; //ex."21-30"
     private String personaName;
 
-    private String lifestyle; //라이프스타일
-    private String foodPreference; //선호음식
+    private String lifestyle; //?쇱씠?꾩뒪???
+    private String foodPreference; //?좏샇?뚯떇
 
-    private List<String> purchaseCriteria; //구매기준(구매결정 시 보는 항목들) ex.가격, 영양성분 등
-    private String attitudeToKFood; //K-food 에 대해 얼마나 관심있는지, 좋아하는지...
-    private String evaluationPerspective; //해당 페르소나의 심사 평가 기준
+    private List<String> purchaseCriteria; //援щℓ湲곗?(援щℓ寃곗젙 ??蹂대뒗 ??ぉ?? ex.媛寃? ?곸뼇?깅텇 ??
+    private String attitudeToKFood; //K-food ??????쇰쭏??愿?ъ엳?붿?, 醫뗭븘?섎뒗吏...
+    private String evaluationPerspective; //?대떦 ?섎Ⅴ?뚮굹???ъ궗 ?됯? 湲곗?
 }

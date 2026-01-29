@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/influencers")
+@RequestMapping("/api/influencers")
 public class InfluencerController {
     private final InfluencerDiscoveryService influencerDiscoveryService;
 

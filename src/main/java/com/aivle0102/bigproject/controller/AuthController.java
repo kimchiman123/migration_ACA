@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @RestController
-@RequestMapping("/")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -58,42 +58,42 @@ public class AuthController {
     @PostMapping("/auth/logout")
     public ResponseEntity<Map<String, String>> logout() {
         authService.logout();
-        return ResponseEntity.ok(Map.of("message", "로그?�웃?�었?�니??"));
+        return ResponseEntity.ok(Map.of("message", "로그아웃되었습니다."));
     }
 
     @PostMapping("/auth/reset-password")
     public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
-        return ResponseEntity.ok(Map.of("message", "비�?번호가 변경되?�습?�다."));
+        return ResponseEntity.ok(Map.of("message", "비밀번호가 변경되었습니다."));
     }
 
     @PostMapping("/auth/password-reset/request")
     public ResponseEntity<Map<String, String>> requestPasswordReset(@Valid @RequestBody PasswordResetRequest request) {
         authService.requestPasswordReset(request);
-        return ResponseEntity.ok(Map.of("message", "?�증 코드가 ?�송?�었?�니??"));
+        return ResponseEntity.ok(Map.of("message", "인증 코드가 전송되었습니다."));
     }
 
     @PostMapping("/auth/password-reset/verify")
     public ResponseEntity<Map<String, String>> verifyPasswordResetCode(@Valid @RequestBody PasswordResetVerifyRequest request) {
         authService.verifyPasswordResetCode(request);
-        return ResponseEntity.ok(Map.of("message", "?�증 코드가 ?�인?�었?�니??"));
+        return ResponseEntity.ok(Map.of("message", "인증 코드가 확인되었습니다."));
     }
 
     @DeleteMapping("/auth/withdraw")
     public ResponseEntity<Map<String, String>> withdraw(Principal principal) {
         if (principal == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-            .body(Map.of("error", "로그?�이 ?�요?�니??"));
+            .body(Map.of("error", "로그인이 필요합니다."));
         }
         authService.withdraw(principal.getName());
-        return ResponseEntity.ok(Map.of("message", "?�원 ?�퇴가 ?�료?�었?�니??"));
+        return ResponseEntity.ok(Map.of("message", "회원 탈퇴가 완료되었습니다."));
     }
 
     @GetMapping("/user/me")
     public ResponseEntity<?> getCurrentUser(Principal principal) {
         if (principal == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-            .body(Map.of("error", "로그?�이 ?�요?�니??"));
+            .body(Map.of("error", "로그인이 필요합니다."));
         }
         UserResponse response = authService.getCurrentUser(principal.getName());
         return ResponseEntity.ok(response);
@@ -106,7 +106,7 @@ public class AuthController {
     ) {
         if (principal == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-            .body(Map.of("error", "로그?�이 ?�요?�니??"));
+            .body(Map.of("error", "로그인이 필요합니다."));
         }
         UserResponse response = authService.updateProfile(principal.getName(), request);
         return ResponseEntity.ok(response);
@@ -119,10 +119,10 @@ public class AuthController {
     ) {
         if (principal == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-            .body(Map.of("error", "?�증???�요?�니??"));
+            .body(Map.of("error", "인증이 필요합니다."));
         }
         authService.verifyPassword(principal.getName(), request.getPassword());
-        return ResponseEntity.ok(Map.of("message", "비�?번호가 ?�인?�었?�니??"));
+        return ResponseEntity.ok(Map.of("message", "비밀번호가 확인되었습니다."));
     }
  
 }

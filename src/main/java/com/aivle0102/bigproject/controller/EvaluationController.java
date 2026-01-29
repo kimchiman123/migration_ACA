@@ -10,12 +10,12 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/evaluation")
+@RequestMapping("/api/evaluation")
 public class EvaluationController {
 
     private final EvaluationService evaluationService;
 
-    // �?AI ?�사?�원?�게 ?�성??보고?��? ?��?�??��? 진행
+    // 각 AI 심사위원에게 생성한 보고서를 토대로 평가 진행
     @PostMapping
     public List<ConsumerFeedback> evaluateByPersonas(@RequestBody EvaluationRequest request) {
         return evaluationService.evaluate(request.getPersonas(), request.getReport());
