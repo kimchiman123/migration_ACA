@@ -16,7 +16,7 @@ import java.security.Principal;
 import java.util.List;
 
 @RestController
-@RequestMapping("/notices")
+@RequestMapping("/api/notices")
 @RequiredArgsConstructor
 public class NoticeController {
 
@@ -96,7 +96,7 @@ public class NoticeController {
 
     private String requireUser(Principal principal) {
         if (principal == null || principal.getName() == null || principal.getName().isBlank()) {
-            throw new CustomException("로그?�이 ?�요?�니??", HttpStatus.UNAUTHORIZED, "UNAUTHORIZED");
+            throw new CustomException("로그인이 필요합니다.", HttpStatus.UNAUTHORIZED, "UNAUTHORIZED");
         }
         return principal.getName();
     }

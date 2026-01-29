@@ -11,9 +11,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 /**
- * CSRF 토큰을 명시적으로 로드하여 쿠키 생성을 강제하는 필터
- * Spring Security 6에서는 CSRF 토큰이 deferred 방식으로 동작하므로
- * 명시적으로 토큰을 로드해야 쿠키가 생성됨
+ * CSRF ?좏겙??紐낆떆?곸쑝濡?濡쒕뱶?섏뿬 荑좏궎 ?앹꽦??媛뺤젣?섎뒗 ?꾪꽣
+ * Spring Security 6?먯꽌??CSRF ?좏겙??deferred 諛⑹떇?쇰줈 ?숈옉?섎?濡?
+ * 紐낆떆?곸쑝濡??좏겙??濡쒕뱶?댁빞 荑좏궎媛 ?앹꽦??
  */
 @Component
 public class CsrfCookieFilter extends OncePerRequestFilter {
@@ -24,7 +24,7 @@ public class CsrfCookieFilter extends OncePerRequestFilter {
 
         CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
         if (csrfToken != null) {
-            // 토큰을 명시적으로 로드하여 쿠키 생성을 강제함
+            // ?좏겙??紐낆떆?곸쑝濡?濡쒕뱶?섏뿬 荑좏궎 ?앹꽦??媛뺤젣??
             csrfToken.getToken();
         }
 

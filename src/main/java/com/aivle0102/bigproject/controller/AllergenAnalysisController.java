@@ -1,5 +1,5 @@
-// ?�레르기 ?�분 분석 ?�청???�신?�는 REST 컨트롤러.
-// 분석 ?�비???�출 ??결과 DTO�?반환?�다.
+// 알레르기 성분 분석 요청을 수신하는 REST 컨트롤러.
+// 분석 서비스 호출 후 결과 DTO를 반환한다.
 package com.aivle0102.bigproject.controller;
 
 import com.aivle0102.bigproject.dto.AllergenAnalysisResponse;
@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/allergen")
+@RequestMapping("/api/allergen")
 @RequiredArgsConstructor
 public class AllergenAnalysisController {
 
@@ -18,7 +18,7 @@ public class AllergenAnalysisController {
 
     @PostMapping("/analyze")
     public ResponseEntity<AllergenAnalysisResponse> analyze(@RequestBody ReportRequest request) {
-        // recipe, targetCountry�??�용 (?�머지??무시)
+        // recipe, targetCountry만 사용 (나머지는 무시)
         AllergenAnalysisResponse resp = allergenAnalysisService.analyze(request);
         return ResponseEntity.ok(resp);
     }

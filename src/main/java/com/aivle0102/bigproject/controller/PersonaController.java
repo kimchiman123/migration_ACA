@@ -15,18 +15,18 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/persona")
+@RequestMapping("/api/persona")
 public class PersonaController {
 
     private final PersonaService personaService;
 
-    //1. ?�시?�에 맞는 �??�??�령?� Top1 뽑기
+    //1. 레시피에 맞는 국가별 연령대 Top1 뽑기
     @PostMapping("/age-group")
     public List<AgeGroupResult> getTopAgeGroups(@RequestBody MultiCountryRequest request) {
         return personaService.selectTopAgeGroups(request.getRecipe(), request.getCountries());
     }
 
-    //2. �??�?Top1 ?�령?�??AI ?�르?�나 각각 ?�성 배치
+    //2. 국가별 Top1 연령대의 AI 페르소나 각각 생성 배치
     @PostMapping("/batch")
     public List<VirtualConsumer> generatePersonas(@RequestBody PersonaBatchRequest request) {
         return personaService.generatePersonas(request.getRecipeSummary(), request.getTargets());
