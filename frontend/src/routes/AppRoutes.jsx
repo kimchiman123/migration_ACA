@@ -20,6 +20,7 @@ import NotFound from '../pages/NotFound';
 import MainLayout from '../components/layout/MainLayout';
 import PasswordCheckPage from '../pages/PasswordCheckPage';
 import UserProfilePage from '../pages/UserProfilePage';
+import ExportAnalysisPage from '../pages/ExportAnalysisPage';
 
 // 인증이 필요한 라우트 보호 컴포넌트
 const ProtectedRoute = ({ children }) => {
@@ -83,6 +84,7 @@ const AppRoutes = () => {
                                 <Route path="recipes/:id/report" element={<RecipeAnalysis />} />
                                 <Route path="create/ai" element={<AICreateRecipe />} />
                                 <Route path="create/manual" element={<UserCreateRecipe />} />
+                                <Route path="visual/export-analysis" element={<ExportAnalysisPage />} />
                                 <Route path="settings/password-check" element={<PasswordCheckPage />} />
                                 <Route path="settings/profile" element={<UserProfilePage />} />
                             </Routes>
