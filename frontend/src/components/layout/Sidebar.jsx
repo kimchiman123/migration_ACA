@@ -16,6 +16,8 @@ const labels = {
     logout: '\ub85c\uadf8\uc544\uc6c3',
     confirmNavigation: '\uc791\uc131 \uc911\uc778 \ub0b4\uc6a9\uc774 \uc0ac\ub77c\uc9d1\ub2c8\ub2e4. \uc774\ub3d9\ud560\uae4c\uc694?',
     confirmLogout: '\ub85c\uadf8\uc544\uc6c3 \ud558\uc2dc\uaca0\uc2b5\ub2c8\uae4c?',
+    testVisual: 'testVisual',
+    exportAnalysis: '\uc218\ucd9c\uc785 \ub370\uc774\ud130 \ubd84\uc11d',
 };
 
 const menuItems = [
@@ -29,8 +31,10 @@ const Sidebar = () => {
     const { logout } = useAuth();
     const userHubActive = location.pathname.startsWith('/mainboard/user-hub');
     const createActive = location.pathname.startsWith('/mainboard/create');
+    const visualActive = location.pathname.startsWith('/mainboard/visual');
     const [userHubOpen, setUserHubOpen] = React.useState(userHubActive);
     const [createOpen, setCreateOpen] = React.useState(createActive);
+    const [visualOpen, setVisualOpen] = React.useState(visualActive);
 
     React.useEffect(() => {
         if (userHubActive) {
@@ -39,7 +43,10 @@ const Sidebar = () => {
         if (createActive) {
             setCreateOpen(true);
         }
-    }, [userHubActive, createActive]);
+        if (visualActive) {
+            setVisualOpen(true);
+        }
+    }, [userHubActive, createActive, visualActive]);
 
     const isActive = (path) => {
         if (!path) {
@@ -103,6 +110,40 @@ const Sidebar = () => {
                             </button>
                         );
                     })}
+
+                    <button
+                        type="button"
+                        onClick={() => setVisualOpen((prev) => !prev)}
+                        className={`w-full text-left px-4 py-3 rounded-xl transition ${visualActive
+                            ? 'bg-[color:var(--surface)] shadow-[0_10px_30px_var(--shadow)] text-[color:var(--text)]'
+                            : 'text-[color:var(--text-muted)] hover:bg-[color:var(--surface-muted)] hover:text-[color:var(--text)]'
+                            }`}
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm font-semibold">{labels.testVisual}</span>
+                            {visualOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                        </div>
+                    </button>
+                    {visualOpen && (
+                        <div className="ml-4 space-y-1">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (!confirmNavigation()) {
+                                        return;
+                                    }
+                                    navigate('/mainboard/visual/export-analysis');
+                                }}
+                                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${isActive('/mainboard/visual/export-analysis')
+                                    ? 'bg-[color:var(--surface-muted)] text-[color:var(--text)]'
+                                    : 'text-[color:var(--text-muted)] hover:bg-[color:var(--surface-muted)] hover:text-[color:var(--text)]'
+                                    }`}
+                            >
+                                {labels.exportAnalysis}
+                            </button>
+                        </div>
+                    )}
+
                     <button
                         type="button"
                         onClick={() => setUserHubOpen((prev) => !prev)}
