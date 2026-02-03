@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import numpy as np
@@ -429,7 +430,6 @@ async def root():
 
 @app.get("/items")
 async def get_items():
-    global df
     if df is None or df.empty: return {"items": []}
     try:
         csv_items = df['item_name'].dropna().unique().tolist()
@@ -439,7 +439,6 @@ async def get_items():
 
 @app.get("/analyze")
 async def analyze(country: str = Query(...), item: str = Query(...)):
-    global df, growth_summary_df
     
     # 1. 매핑 및 유효성 검사
     country_name = REVERSE_MAPPING.get(country, country) # 코드(US) -> 이름(미국)
@@ -797,6 +796,7 @@ async def analyze_consumer(item_id: str = Query(None, description="ASIN"), item_
         print(f"키워드 분석 오류: {e}")
     
     # =========================================================
+    # =========================================================
     # 4. Diverging Bar Chart (감성 영향도 시각화)
     # =========================================================
     
@@ -807,7 +807,7 @@ async def analyze_consumer(item_id: str = Query(None, description="ASIN"), item_
     # Diverging Bar Chart 생성 (x축 기준 0)
     fig_diverging = go.Figure()
     
-    # 긍정 영향 키워드 (왼쪽, 빨간색)
+    # 부정 영향 키워드 (왼쪽, 빨간색)
     if neg_keywords:
         fig_diverging.add_trace(go.Bar(
             y=[k["keyword"] for k in neg_keywords],
@@ -880,79 +880,26 @@ async def analyze_consumer(item_id: str = Query(None, description="ASIN"), item_
         yaxis_title="Index (기준 1.0)",
         template="plotly_white",
         height=400,
-        # y축 범위는 데이터에 따라 자동 조정되지만 0부터 시작하게 설정
         yaxis=dict(rangemode='tozero') 
-    )
-    
-    # =========================================================
-    # 6. 핵심 가치 드라이버 (Radar Chart) - 기존 유지
-    # =========================================================
-    
-    # 한국어 라벨 매핑용 metrics
-    metrics_map = {
-        "Taste": "맛", "Price": "가격", "Package": "포장", "Quality": "품질", "Delivery": "배송", "Texture": "식감"
-    }
-    raw_metrics = {k: 0 for k in metrics_map.keys()}
-    
-    # 리뷰 본문 키워드 매칭 분석 (품사 태그 제거 후)
-    all_text_combined = " ".join(filtered['cleaned_text'].apply(remove_pos_tags).dropna().astype(str).tolist()).lower()
-    
-    raw_metrics['Taste'] = all_text_combined.count('taste') + all_text_combined.count('flavor') + all_text_combined.count('delicious')
-    raw_metrics['Price'] = all_text_combined.count('price') + all_text_combined.count('expensive') + all_text_combined.count('cheap') + all_text_combined.count('value')
-    raw_metrics['Package'] = all_text_combined.count('package') + all_text_combined.count('box') + all_text_combined.count('broken')
-    raw_metrics['Quality'] = all_text_combined.count('quality') + all_text_combined.count('good') + all_text_combined.count('bad')
-    raw_metrics['Delivery'] = all_text_combined.count('delivery') + all_text_combined.count('shipping') + all_text_combined.count('arrive')
-    raw_metrics['Texture'] = all_text_combined.count('texture') + all_text_combined.count('soft') + all_text_combined.count('hard')
-         
-    # 정규화 (0-100)
-    max_val = max(raw_metrics.values()) if max(raw_metrics.values()) > 0 else 1
-    r_values = [v/max_val*100 for v in raw_metrics.values()]
-    theta_values = [metrics_map[k] for k in raw_metrics.keys()]
-    
-    fig_radar = go.Figure(data=go.Scatterpolar(
-        r=r_values,
-        theta=theta_values,
-        fill='toself',
-        name='핵심 가치 요인'
-    ))
-    fig_radar.update_layout(
-        polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
-        title="핵심 구매 결정 요인 (언급 빈도)"
     )
 
     # =========================================================
-    # 결과 반환
+    # 6. Advanced Consumer Experience Metrics
     # =========================================================
-    
-    # =========================================================
-    # 결과 반환
-    # =========================================================
-    
-    return {
-        "has_data": True,
-        "search_term": item_name if item_name else item_id,
-        "metrics": metrics,
-        "keywords_analysis": keywords_analysis[:50], # 상위 50개까지만 반환
-        "diverging_summary": {
-            "negative_keywords": [{"keyword": k["keyword"], "impact_score": k["impact_score"], "satisfaction_index": k.get("satisfaction_index", 0), "positivity_rate": k.get("positivity_rate", 0)} for k in neg_keywords],
-            "positive_keywords": [{"keyword": k["keyword"], "impact_score": k["impact_score"], "satisfaction_index": k.get("satisfaction_index", 0), "positivity_rate": k.get("positivity_rate", 0)} for k in pos_keywords]
-        },
-        "charts": {
-            "impact_diverging_bar": json.loads(fig_diverging.to_json()),
-            "positivity_bar": json.loads(fig_positivity.to_json()), # Satisfaction Index Bar
-            "value_radar": json.loads(fig_radar.to_json())
-        }
-    }
+
+    # NSS (Net Sentiment Score) 계산
+    pos_count = filtered[filtered['sentiment_score'] >= 0.75].shape[0]
+    neg_count = filtered[filtered['sentiment_score'] <= 0.25].shape[0]
+    nss_score = ((pos_count - neg_count) / total_count * 100) if total_count > 0 else 0
     
     # CAS (Customer Advocacy Score)
-    # 재구매의사(repurchase) + 추천의사(recommendation) 모두 True인 비율
     advocates = filtered[
         (filtered['repurchase_intent_hybrid'] == True) & 
         (filtered['recommendation_intent_hybrid'] == True)
     ].shape[0]
     cas_score = (advocates / total_count) if total_count > 0 else 0
     
-    # 시각화 1: NSS 게이지 차트
+    # NSS 게이지 차트
     fig_nss = go.Figure(go.Indicator(
         mode = "gauge+number",
         value = nss_score,
@@ -961,49 +908,39 @@ async def analyze_consumer(item_id: str = Query(None, description="ASIN"), item_
             'axis': {'range': [-100, 100]},
             'bar': {'color': "darkblue"},
             'steps' : [
-                {'range': [-100, -30], 'color': "#ff4d4f"}, # 부정적
-                {'range': [-30, 30], 'color': "#faad14"},   # 중립적
-                {'range': [30, 100], 'color': "#52c41a"}    # 긍정적
+                {'range': [-100, -30], 'color': "#ff4d4f"},
+                {'range': [-30, 30], 'color': "#faad14"},
+                {'range': [30, 100], 'color': "#52c41a"}
             ],
             'threshold' : {'line': {'color': "black", 'width': 4}, 'thickness': 0.75, 'value': nss_score}
         }
     ))
     fig_nss.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20))
 
-    # 시각화 2: ASIN별 NSS vs CAS 산점도 (전체 데이터 기준 비교)
-    # 비교를 위해 전체 데이터셋에서 ASIN별로 집계
+    # ASIN별 NSS vs CAS 산점도
     asin_stats = df_consumer.groupby('asin').agg(
         total=('sentiment_score', 'count'),
         pos_count=('sentiment_score', lambda x: (x >= 0.75).sum()),
-        neg_count=('sentiment_score', lambda x: (x <= 0.25).sum()),
-        advocates=('rating', lambda x: 0) # 임시 초기화
+        neg_count=('sentiment_score', lambda x: (x <= 0.25).sum())
     ).reset_index()
     
-    # CAS 집계 (복잡한 조건이라 별도 계산 후 병합)
     cas_counts = df_consumer[
         (df_consumer['repurchase_intent_hybrid'] == True) & 
         (df_consumer['recommendation_intent_hybrid'] == True)
     ].groupby('asin').size().reset_index(name='adv_count')
     
     asin_stats = pd.merge(asin_stats, cas_counts, on='asin', how='left').fillna(0)
-    
     asin_stats['nss'] = (asin_stats['pos_count'] - asin_stats['neg_count']) / asin_stats['total'] * 100
     asin_stats['cas'] = asin_stats['adv_count'] / asin_stats['total']
     
-    # 현재 선택된 ASIN 하이라이트
     current_asins = filtered['asin'].unique()
-    
     fig_scatter_nss = go.Figure()
-    
-    # 전체 분포
     fig_scatter_nss.add_trace(go.Scatter(
         x=asin_stats['nss'], y=asin_stats['cas'],
         mode='markers',
         marker=dict(color='lightgray', size=8, opacity=0.5),
         name='타사 제품'
     ))
-    
-    # 현재 제품
     curr_stats = asin_stats[asin_stats['asin'].isin(current_asins)]
     fig_scatter_nss.add_trace(go.Scatter(
         x=curr_stats['nss'], y=curr_stats['cas'],
@@ -1011,7 +948,6 @@ async def analyze_consumer(item_id: str = Query(None, description="ASIN"), item_
         marker=dict(color='red', size=12, symbol='star'),
         name='현재 분석 제품'
     ))
-    
     fig_scatter_nss.update_layout(
         title="브랜드 포지셔닝 (NSS vs CAS)",
         xaxis_title="NSS (순 정서 점수)",
@@ -1020,40 +956,13 @@ async def analyze_consumer(item_id: str = Query(None, description="ASIN"), item_
         height=400
     )
 
-
-    # =========================================================
-    # 2. Operations View: 운영 리스크 및 물류 최적화
-    # =========================================================
-    
     # PQI (Product Quality Index)
-    # quality_issues_semantic 컬럼 explode
     quality_exploded = filtered.explode('quality_issues_semantic')
     quality_issues_count = quality_exploded['quality_issues_semantic'].dropna().value_counts()
-    
-    total_reviews = filtered.shape[0]
     total_issues = quality_issues_count.sum()
+    pqi_score = max(0, 100 - (total_issues / total_count * 20)) if total_count > 0 else 100
     
-    # 단순화된 PQI: 100점 만점에서 이슈 발생 비율만큼 차감 (가중치 임의 설정 10)
-    # 이슈가 하나도 없으면 100
-    pqi_score = max(0, 100 - (total_issues / total_reviews * 20)) if total_reviews > 0 else 100
-    
-    # LFI (Logistics Friction Index)
-    # delivery_issues_semantic 및 packaging에서 파손 관련 키워드
-    cols_to_check = ['delivery_issues_semantic', 'packaging_keywords']
-    lfi_keywords = ['dent', 'leak', 'broken', 'damage', 'crush', 'open']
-    
-    lfi_count = 0
-    for col in cols_to_check:
-        if col in filtered.columns:
-            exploded = filtered.explode(col)
-            # 해당 키워드가 포함된 경우 카운트
-            mask = exploded[col].astype(str).str.contains('|'.join(lfi_keywords), case=False, na=False)
-            lfi_count += mask.sum()
-            
-    # LFI: 전체 리뷰 중 파손 관련 언급 비율 (낮을수록 좋음, 0~10 scale로 변환 표시)
-    lfi_rate = (lfi_count / total_reviews * 100) if total_reviews > 0 else 0
-    
-    # 시각화 3: 이슈 트리맵 (Quality Issues)
+    fig_treemap = go.Figure()
     if not quality_issues_count.empty:
         fig_treemap = px.treemap(
             names=quality_issues_count.index,
@@ -1061,34 +970,30 @@ async def analyze_consumer(item_id: str = Query(None, description="ASIN"), item_
             values=quality_issues_count.values,
             title="주요 품질 불만 (Quality Issues)"
         )
-    else:
-        fig_treemap = go.Figure()
-        fig_treemap.update_layout(title="품질 불만 데이터가 없습니다.")
 
-    # =========================================================
-    # 3. R&D View: 관능 프로파일링 및 레시피 제안
-    # =========================================================
+    # LFI (Logistics Friction Index)
+    lfi_keywords = ['dent', 'leak', 'broken', 'damage', 'crush', 'open']
+    lfi_count = 0
+    for col in ['delivery_issues_semantic', 'packaging_keywords']:
+        if col in filtered.columns:
+            exploded = filtered.explode(col)
+            mask = exploded[col].astype(str).str.contains('|'.join(lfi_keywords), case=False, na=False)
+            lfi_count += mask.sum()
+    lfi_rate = (lfi_count / total_count * 100) if total_count > 0 else 0
     
     # SPI (Sensory Performance Index)
-    # sensory_conflict가 False인 비율 (일치도)
-    spi_score = (filtered[filtered['sensory_conflict'] == False].shape[0] / total_reviews * 100) if total_reviews > 0 else 0
+    spi_score = (filtered[filtered['sensory_conflict'] == False].shape[0] / total_count * 100) if total_count > 0 else 0
     
-    # Texture-Sentiment Correlation
-    # texture_terms explode하여 각 텍스처별 평균 평점 계산
     texture_exploded = filtered.explode('texture_terms')
     texture_sentiment = texture_exploded.groupby('texture_terms')['sentiment_score'].mean().sort_values(ascending=False).head(8)
     
-    # 시각화 4: 관능 레이더 차트 (상위 5개 텍스처 특성)
+    fig_radar = go.Figure()
     if not texture_sentiment.empty:
         categories = texture_sentiment.index.tolist()
         values = texture_sentiment.values.tolist()
-        # 레이더 차트 닫기 위해 첫 번째 값 추가
-        categories_radar = categories + [categories[0]]
-        values_radar = values + [values[0]]
-        
         fig_radar = go.Figure(data=go.Scatterpolar(
-            r=values_radar,
-            theta=categories_radar,
+            r=values + [values[0]],
+            theta=categories + [categories[0]],
             fill='toself',
             name='Texture Sentiment'
         ))
@@ -1097,32 +1002,15 @@ async def analyze_consumer(item_id: str = Query(None, description="ASIN"), item_
             title="식감별 선호도 (Textural Preference)",
             height=400
         )
-    else:
-        fig_radar = go.Figure()
 
-    # 성분(Ingredients) - 호불호 분석 (부정 리뷰에 많이 등장하는 성분)
-    neg_reviews = filtered[filtered['sentiment_score'] <= 0.25]
-    ingredients_exploded = neg_reviews.explode('ingredients')
-    neg_ingredients = ingredients_exploded['ingredients'].value_counts().head(10)
-
-    # =========================================================
-    # 4. Marketing View: 타겟팅 및 가치 인식
-    # =========================================================
-    
-    # Value Perception Score (-1 ~ 1) -> 평균
-    # value_perception_hybrid values: -1, 0, 1
+    # Value & Price
     value_score = filtered['value_perception_hybrid'].mean()
-    
-    # Price Sensitivity Ratio (True 비율)
     price_sensitive_ratio = filtered['price_sensitive'].mean() if 'price_sensitive' in filtered.columns else 0
     
-    # 시각화 5: 가치-가격 4분면 매트릭스
-    # ASIN별로 집계하여 배치
     marketing_stats = df_consumer.groupby('asin').agg(
         avg_value=('value_perception_hybrid', 'mean'),
         price_sens=('price_sensitive', 'mean')
     ).reset_index()
-    
     if 'title' in df_consumer.columns:
         titles = df_consumer.groupby('asin')['title'].first().reset_index()
         marketing_stats = pd.merge(marketing_stats, titles, on='asin', how='left')
@@ -1130,49 +1018,24 @@ async def analyze_consumer(item_id: str = Query(None, description="ASIN"), item_
         marketing_stats['title'] = marketing_stats['asin']
     
     fig_marketing = go.Figure()
-    
-    # 전체 제품
     fig_marketing.add_trace(go.Scatter(
-        x=marketing_stats['price_sens'], 
-        y=marketing_stats['avg_value'],
-        mode='markers',
-        text=marketing_stats['title'],
-        marker=dict(color='#8884d8', opacity=0.5),
-        name='타사 제품'
+        x=marketing_stats['price_sens'], y=marketing_stats['avg_value'],
+        mode='markers', text=marketing_stats['title'],
+        marker=dict(color='#8884d8', opacity=0.5), name='타사 제품'
     ))
-    
-    # 현재 제품
     curr_mk = marketing_stats[marketing_stats['asin'].isin(current_asins)]
     fig_marketing.add_trace(go.Scatter(
-        x=curr_mk['price_sens'], 
-        y=curr_mk['avg_value'],
-        mode='markers',
-        text=curr_mk['title'],
-        marker=dict(color='#ff7300', size=15, symbol='diamond'),
-        name='현재 제품'
+        x=curr_mk['price_sens'], y=curr_mk['avg_value'],
+        mode='markers', text=curr_mk['title'],
+        marker=dict(color='#ff7300', size=15, symbol='diamond'), name='현재 제품'
     ))
-    
-    # 사분면 기준선 (Value 중심 0, Sensitivity 중심 0.5 가정)
-    # Sensitivity는 0~1 비율이므로 0.5를 중심으로 잡을 수도 있고, 전체 평균을 잡을 수도 있음. 
-    # 여기서는 0.5를 기준으로 함. Value는 -1~1이므로 0 기준.
     fig_marketing.add_hline(y=0, line_dash="dash", line_color="gray")
     fig_marketing.add_vline(x=0.5, line_dash="dash", line_color="gray")
-    
-    fig_marketing.add_annotation(x=0.2, y=0.8, text="Premium Zone (프리미엄)", showarrow=False, font=dict(color="blue"))
-    fig_marketing.add_annotation(x=0.8, y=0.8, text="Mass Zone (가성비)", showarrow=False, font=dict(color="green"))
-    
-    fig_marketing.update_layout(
-        title="가치-가격 포지셔닝 맵",
-        xaxis_title="가격 민감도 (Price Sensitivity)",
-        yaxis_title="가치 인식 (Value Perception)",
-        template="plotly_white",
-        height=500
-    )
-
+    fig_marketing.update_layout(title="가치-가격 포지셔닝 맵", xaxis_title="가격 민감도", yaxis_title="가치 인식", template="plotly_white")
 
     return {
         "has_data": True,
-        "item_id": item_id,
+        "search_term": item_name if item_name else item_id,
         "metrics": {
             "nss": round(nss_score, 2),
             "cas": round(cas_score, 2),
@@ -1182,7 +1045,14 @@ async def analyze_consumer(item_id: str = Query(None, description="ASIN"), item_
             "value_score": round(value_score, 2),
             "price_sensitivity": round(price_sensitive_ratio, 2)
         },
+        "keywords_analysis": keywords_analysis[:50],
+        "diverging_summary": {
+            "negative_keywords": [{"keyword": k["keyword"], "impact_score": k["impact_score"], "satisfaction_index": k.get("satisfaction_index", 0)} for k in neg_keywords],
+            "positive_keywords": [{"keyword": k["keyword"], "impact_score": k["impact_score"], "satisfaction_index": k.get("satisfaction_index", 0)} for k in pos_keywords]
+        },
         "charts": {
+            "impact_diverging_bar": json.loads(fig_diverging.to_json()),
+            "positivity_bar": json.loads(fig_positivity.to_json()),
             "nss_gauge": json.loads(fig_nss.to_json()),
             "nss_cas_scatter": json.loads(fig_scatter_nss.to_json()),
             "quality_treemap": json.loads(fig_treemap.to_json()),
@@ -1193,7 +1063,6 @@ async def analyze_consumer(item_id: str = Query(None, description="ASIN"), item_
 
 @app.get("/dashboard")
 async def dashboard():
-    global df
     if df is None or df.empty:
         return {"has_data": False}
         
