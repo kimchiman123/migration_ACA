@@ -76,7 +76,10 @@ public class SecurityConfig {
         @Bean
         public CorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration configuration = new CorsConfiguration();
-                configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5173"));
+                configuration.setAllowedOrigins(List.of(
+                                "http://localhost:3000",
+                                "http://localhost:5173",
+                                "https://bp-frontend-app.wittysand-a0f4e87e.centralindia.azurecontainerapps.io"));
                 configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                 configuration.setAllowedHeaders(List.of("*"));
                 configuration.setAllowCredentials(true);
