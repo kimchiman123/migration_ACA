@@ -23,11 +23,11 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 
-# Copy built assets from builder
-RUN rm /etc/nginx/conf.d/default.conf
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Nginx templates support environment variables substitution
+# Copy our config as a template
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
-# Copy custom nginx configuration
+# Copy built assets from builder
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 EXPOSE 80
