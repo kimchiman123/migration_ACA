@@ -21,9 +21,9 @@ public class AnalysisServiceClient {
         public AnalysisServiceClient(@Value("${analysis.engine.url}") String baseUrl) {
                 HttpClient httpClient = HttpClient.create()
                                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 2000) // ConnectTimeout 2초
-                                .responseTimeout(Duration.ofSeconds(5)) // ReadTimeout 5초 (Response)
-                                .doOnConnected(conn -> conn.addHandlerLast(new ReadTimeoutHandler(5, TimeUnit.SECONDS))
-                                                .addHandlerLast(new WriteTimeoutHandler(5, TimeUnit.SECONDS)));
+                                .responseTimeout(Duration.ofSeconds(30)) // ReadTimeout 30초 (Response)
+                                .doOnConnected(conn -> conn.addHandlerLast(new ReadTimeoutHandler(30, TimeUnit.SECONDS))
+                                                .addHandlerLast(new WriteTimeoutHandler(30, TimeUnit.SECONDS)));
 
                 this.webClient = WebClient.builder()
                                 .baseUrl(baseUrl)
