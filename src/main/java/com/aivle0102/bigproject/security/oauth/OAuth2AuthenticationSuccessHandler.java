@@ -23,7 +23,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
 
     private final JwtTokenProvider jwtTokenProvider;
 
-    @Value("${app.oauth2.redirect-uri}")
+    @Value("${app.oauth2.redirect-uri:https://bp-frontend-app.wittysand-a0f4e87e.centralindia.azurecontainerapps.io/oauth/callback}")
     private String redirectUri;
 
     @jakarta.annotation.PostConstruct
