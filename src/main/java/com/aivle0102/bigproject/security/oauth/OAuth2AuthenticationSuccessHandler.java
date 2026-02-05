@@ -26,12 +26,16 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
     @Value("${app.oauth2.redirect-uri}")
     private String redirectUri;
 
+    @jakarta.annotation.PostConstruct
+    public void init() {
+        log.info("#### [OAuth2SuccessHandler] Initialized with redirectUri: {} ####", redirectUri);
+    }
+
     @Override
     public void onAuthenticationSuccess(
             HttpServletRequest request,
             HttpServletResponse response,
-            Authentication authentication
-    ) throws IOException, ServletException {
+            Authentication authentication) throws IOException, ServletException {
         OAuth2User oauthUser = (OAuth2User) authentication.getPrincipal();
         String userId = String.valueOf(oauthUser.getAttributes().get("userId"));
         String userName = String.valueOf(oauthUser.getAttributes().get("userName"));
