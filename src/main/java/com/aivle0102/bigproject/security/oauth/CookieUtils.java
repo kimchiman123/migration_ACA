@@ -27,6 +27,7 @@ public class CookieUtils {
                 .path("/")
                 .httpOnly(true)
                 .secure(true)
+                .domain("azurecontainerapps.io") // 중요: 모든 서브도메인에서 쿠키 공유 허용
                 .maxAge(maxAge)
                 .sameSite("None")
                 .build();
