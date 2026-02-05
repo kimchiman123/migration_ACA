@@ -24,12 +24,13 @@ public class OAuth2AuthenticationFailureHandler implements AuthenticationFailure
     public void onAuthenticationFailure(
             HttpServletRequest request,
             HttpServletResponse response,
-            AuthenticationException exception
-    ) throws IOException, ServletException {
+            AuthenticationException exception) throws IOException, ServletException {
         String targetUrl = UriComponentsBuilder.fromUriString(redirectUri)
                 .queryParam("error", "oauth_failed")
                 .build()
                 .toUriString();
+
+        log.error("OAuth2 Login Failed: {}", exception.getMessage(), exception);
 
         try {
             log.info("OAuth2 failure redirectUri={}, targetUrl={}", redirectUri, targetUrl);
