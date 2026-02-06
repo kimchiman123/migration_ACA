@@ -30,7 +30,8 @@ COPY nginx.conf /etc/nginx/templates/default.conf.template
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Default environment variables for Nginx proxy pass
-ENV BACKEND_URL=http://backend:8080
+# Azure Container Apps internal DNS: http://<app-name>:<port>
+ENV BACKEND_URL=http://bp-backend-app:8080
 
 EXPOSE 80
 
