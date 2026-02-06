@@ -11,13 +11,10 @@ from plotly.subplots import make_subplots
 from typing import Optional, List, Dict, Any
 from contextlib import asynccontextmanager
 import os
-from scipy.stats import linregress
 from sklearn.feature_extraction.text import CountVectorizer
-from collections import Counter
 import gradio as gr
 from chatbot_app import demo as chatbot_demo
 import psycopg2
-from psycopg2.extras import RealDictCursor
 
 # DB Connection Details
 DB_HOST = os.environ.get("DB_HOST", "db")
@@ -589,7 +586,6 @@ async def analyze(country: str = Query(...), item: str = Query(...)):
 
 @app.get("/analyze/consumer")
 async def analyze_consumer(item_id: str = Query(None, description="ASIN"), item_name: str = Query(None, description="제품명/키워드")):
-    global df_consumer, GLOBAL_MEAN_SENTIMENT, GLOBAL_STD_SENTIMENT, GLOBAL_MEAN_RATING
     
     
     conn = get_db_connection()
