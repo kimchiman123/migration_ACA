@@ -1,10 +1,6 @@
 package com.aivle0102.bigproject.config;
 
-<<<<<<< HEAD
-=======
 import java.util.Properties;
-
->>>>>>> upstream/UI5
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -12,11 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 
-<<<<<<< HEAD
 import java.util.Properties;
-
-=======
->>>>>>> upstream/UI5
 @Configuration
 public class MailSenderConfig {
 
@@ -71,9 +63,6 @@ public class MailSenderConfig {
         props.put("mail.smtp.starttls.required", String.valueOf(startTlsRequired));
         return sender;
     }
-<<<<<<< HEAD
 
     // Kakao/Daum/Hanmail recipients can be served by Gmail sender as well.
-=======
->>>>>>> upstream/UI5
 }

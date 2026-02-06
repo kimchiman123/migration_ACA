@@ -99,11 +99,8 @@ const NoticeBoard = () => {
     const [showForm, setShowForm] = React.useState(false);
     const [title, setTitle] = React.useState('');
     const [content, setContent] = React.useState('');
-<<<<<<< HEAD
-=======
     const [searchField, setSearchField] = React.useState('title');
     const [searchTerm, setSearchTerm] = React.useState('');
->>>>>>> upstream/UI5
     const [page, setPage] = React.useState(1);
     const [loadingNotices, setLoadingNotices] = React.useState(true);
     const [noticeError, setNoticeError] = React.useState('');
@@ -119,15 +116,6 @@ const NoticeBoard = () => {
     const [isSubmittingNotice, setIsSubmittingNotice] = React.useState(false);
     const [isSavingNotice, setIsSavingNotice] = React.useState(false);
     const [isSavingComment, setIsSavingComment] = React.useState(false);
-<<<<<<< HEAD
-    const pageSize = 5;
-    const totalPages = Math.max(1, Math.ceil(notices.length / pageSize));
-    const currentPage = Math.min(page, totalPages);
-    const pagedNotices = notices.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-    const isLoggedIn = Boolean(user || localStorage.getItem('accessToken'));
-    const isEditingComment = commentEditingId !== null;
-
-=======
     const normalizedSearch = searchTerm.trim().toLowerCase();
     const filteredNotices = normalizedSearch
         ? notices.filter((notice) => {
@@ -150,7 +138,6 @@ const NoticeBoard = () => {
         }
     }, []);
 
->>>>>>> upstream/UI5
     const isOwner = React.useCallback(
         (authorId, authorName) => {
             if (!rawName) {
@@ -171,11 +158,7 @@ const NoticeBoard = () => {
         setLoadingNotices(true);
         setNoticeError('');
         try {
-<<<<<<< HEAD
-            const response = await axiosInstance.get('/notices');
-=======
             const response = await axiosInstance.get('/api/notices');
->>>>>>> upstream/UI5
             const data = Array.isArray(response.data) ? response.data : response.data?.data ?? [];
             const normalized = data.map(normalizeNotice);
             if (normalized.length) {
@@ -203,11 +186,7 @@ const NoticeBoard = () => {
         setDetailError('');
         setComments([]);
         try {
-<<<<<<< HEAD
-            const response = await axiosInstance.get(`/notices/${noticeId}`);
-=======
             const response = await axiosInstance.get(`/api/notices/${noticeId}`);
->>>>>>> upstream/UI5
             const detail = normalizeNotice(response.data?.data ?? response.data);
             setSelectedNotice(detail);
         } catch (error) {
@@ -215,11 +194,7 @@ const NoticeBoard = () => {
             setDetailError('공지사항을 불러오지 못했습니다.');
         }
         try {
-<<<<<<< HEAD
-            const response = await axiosInstance.get(`/notices/${noticeId}/comments`);
-=======
             const response = await axiosInstance.get(`/api/notices/${noticeId}/comments`);
->>>>>>> upstream/UI5
             const data = Array.isArray(response.data) ? response.data : response.data?.data ?? [];
             setComments(data.map(normalizeComment));
         } catch (error) {
@@ -234,13 +209,10 @@ const NoticeBoard = () => {
         loadNotices();
     }, [loadNotices]);
 
-<<<<<<< HEAD
-=======
     React.useEffect(() => {
         setPage(1);
     }, [searchField, searchTerm]);
 
->>>>>>> upstream/UI5
     const handleOpenDetail = (notice) => {
         setSelectedId(notice.id);
         setSelectedNotice(notice);
@@ -258,12 +230,8 @@ const NoticeBoard = () => {
         }
         setIsSubmittingNotice(true);
         try {
-<<<<<<< HEAD
-            const response = await axiosInstance.post('/notices', {
-=======
             await refreshCsrf();
             const response = await axiosInstance.post('/api/notices', {
->>>>>>> upstream/UI5
                 title: title.trim(),
                 content: content.trim(),
             });
@@ -309,12 +277,8 @@ const NoticeBoard = () => {
         }
         setIsSavingNotice(true);
         try {
-<<<<<<< HEAD
-            const response = await axiosInstance.put(`/notices/${selectedNotice.id}`, {
-=======
             await refreshCsrf();
             const response = await axiosInstance.put(`/api/notices/${selectedNotice.id}`, {
->>>>>>> upstream/UI5
                 title: editTitle.trim(),
                 content: editContent.trim(),
             });
@@ -345,12 +309,8 @@ const NoticeBoard = () => {
         }
         setIsSavingNotice(true);
         try {
-<<<<<<< HEAD
-            await axiosInstance.delete(`/notices/${selectedNotice.id}`);
-=======
             await refreshCsrf();
             await axiosInstance.delete(`/api/notices/${selectedNotice.id}`);
->>>>>>> upstream/UI5
             setNotices((prev) => prev.filter((notice) => notice.id !== selectedNotice.id));
             setShowDetail(false);
             setSelectedNotice(null);
@@ -368,12 +328,8 @@ const NoticeBoard = () => {
         }
         setIsSavingComment(true);
         try {
-<<<<<<< HEAD
-            const response = await axiosInstance.post(`/notices/${selectedNotice.id}/comments`, {
-=======
             await refreshCsrf();
             const response = await axiosInstance.post(`/api/notices/${selectedNotice.id}/comments`, {
->>>>>>> upstream/UI5
                 content: commentInput.trim(),
             });
             const created = normalizeComment(response.data?.data ?? response.data);
@@ -405,12 +361,8 @@ const NoticeBoard = () => {
         }
         setIsSavingComment(true);
         try {
-<<<<<<< HEAD
-            const response = await axiosInstance.put(`/notices/${selectedNotice.id}/comments/${comment.id}`, {
-=======
             await refreshCsrf();
             const response = await axiosInstance.put(`/api/notices/${selectedNotice.id}/comments/${comment.id}`, {
->>>>>>> upstream/UI5
                 content: commentEditingText.trim(),
             });
             const updated = normalizeComment(response.data?.data ?? response.data);
@@ -439,12 +391,8 @@ const NoticeBoard = () => {
         }
         setIsSavingComment(true);
         try {
-<<<<<<< HEAD
-            await axiosInstance.delete(`/notices/${selectedNotice.id}/comments/${comment.id}`);
-=======
             await refreshCsrf();
             await axiosInstance.delete(`/api/notices/${selectedNotice.id}/comments/${comment.id}`);
->>>>>>> upstream/UI5
             setComments((prev) => prev.filter((item) => item.id !== comment.id));
         } catch (error) {
             console.error(error);
@@ -485,12 +433,9 @@ const NoticeBoard = () => {
                         {loadingNotices && (
                             <div className="px-4 py-6 text-sm text-[color:var(--text-muted)]">공지사항을 불러오는 중입니다.</div>
                         )}
-<<<<<<< HEAD
-=======
                         {!loadingNotices && searchTerm.trim().length > 0 && filteredNotices.length === 0 && (
                             <div className="px-4 py-6 text-sm text-[color:var(--text-muted)]">일치하는 공지사항이 없습니다.</div>
                         )}
->>>>>>> upstream/UI5
                         {!loadingNotices && noticeError && (
                             <div className="px-4 py-3 text-xs text-[color:var(--danger)] bg-[color:var(--danger-bg)]">
                                 {noticeError}

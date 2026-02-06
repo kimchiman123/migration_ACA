@@ -9,14 +9,9 @@ import java.util.List;
 @Getter
 @Builder
 public class RecipeCaseResponse {
-<<<<<<< HEAD
-    private List<RegulatoryCase> productCases;
-
-=======
     @JsonProperty("product_cases")
     private ProductCases productCases;
 
     @JsonProperty("ingredient_cases")
->>>>>>> upstream/UI5
     private List<IngredientCases> ingredientCases;
 }

@@ -21,14 +21,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-<<<<<<< HEAD
-import java.util.Map;
-=======
 import java.security.Principal;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.List;
->>>>>>> upstream/UI5
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -305,11 +301,7 @@ public class ReportController {
             String report = aiReportService.generateSummary(serialized);
             return ResponseEntity.ok(report);
         } catch (Exception e) {
-<<<<<<< HEAD
-            throw new IllegalStateException("Failed to serialize report for summary", e);
-=======
             throw new IllegalStateException("요약용 보고서 직렬화 실패", e);
->>>>>>> upstream/UI5
         }
     }
 }

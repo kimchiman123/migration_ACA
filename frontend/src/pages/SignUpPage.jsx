@@ -6,8 +6,6 @@ import GlassCard from '../components/common/GlassCard';
 import ThemeToggle from '../components/common/ThemeToggle';
 import Footer from '../components/common/Footer';
 import axiosInstance from '../axiosConfig';
-<<<<<<< HEAD
-=======
 
 const TARGET_COUNTRY_OPTIONS = [
     { value: 'KR', label: '한국' },
@@ -21,7 +19,6 @@ const TARGET_COUNTRY_OPTIONS = [
     { value: 'VN', label: '베트남' },
     { value: 'TH', label: '태국' },
 ];
->>>>>>> upstream/UI5
 
 const SignUpPage = () => {
     const navigate = useNavigate();
@@ -34,12 +31,6 @@ const SignUpPage = () => {
         companyName: '',
         industry: '',
         targetCountry: ''
-    });
-    const [consents, setConsents] = useState({
-        terms: false,
-        privacy: false,
-        thirdParty: false,
-        uniqueId: false
     });
     const [consents, setConsents] = useState({
         terms: false,
@@ -159,10 +150,6 @@ const SignUpPage = () => {
     const handleSignup = async () => {
         setError('');
 
-<<<<<<< HEAD
-        if (!consents.terms || !consents.privacy || !consents.thirdParty || !consents.uniqueId) {
-            showError('필수 약관에 모두 동의해주세요.');
-=======
         if (!formData.userName) {
             showError('이름(닉네임)을 입력해주세요');
             return;
@@ -190,7 +177,6 @@ const SignUpPage = () => {
 
         if (!formData.userId) {
             showError('이메일 주소(아이디)를 입력해주세요');
->>>>>>> upstream/UI5
             return;
         }
 
@@ -202,18 +188,6 @@ const SignUpPage = () => {
         const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
         if (!passwordPattern.test(formData.password)) {
             showError('비밀번호는 8자 이상, 영문+숫자+특수문자를 포함해야 합니다.');
-<<<<<<< HEAD
-            return;
-        }
-
-        if (isGuessablePassword(formData.password, formData.userId, formData.birthDate)) {
-            showError('연속된 문자열이나 아이디/생년월일 등 추측 가능한 정보를 비밀번호에 사용할 수 없습니다.');
-            return;
-        }
-
-        if (!formData.birthDate) {
-            showError('생년월일을 입력해주세요.');
-=======
             return;
         }
 
@@ -224,16 +198,11 @@ const SignUpPage = () => {
 
         if (!consents.terms || !consents.privacy || !consents.thirdParty || !consents.uniqueId) {
             showError('필수 동의 항목을 체크해주세요');
->>>>>>> upstream/UI5
             return;
         }
 
         try {
-<<<<<<< HEAD
-            const response = await axiosInstance.post('/auth/join', formData);
-=======
             const response = await axiosInstance.post('/api/auth/join', formData);
->>>>>>> upstream/UI5
             if (response.status >= 200 && response.status < 300) {
                 alert('회원가입이 완료되었습니다. 로그인해주세요.');
                 navigate('/login');
@@ -264,15 +233,9 @@ const SignUpPage = () => {
             sessionStorage.setItem('oauthFlow', 'signup');
             localStorage.setItem('oauthFlow', 'signup');
         } catch (storageError) {
-<<<<<<< HEAD
-            console.warn('OAuth flow storage unavailable:', storageError);
-        }
-        const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api$/, '');
-=======
             console.warn('oauthFlow 스토리지 사용 불가:', storageError);
         }
         const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080').replace(/\/$/, '');
->>>>>>> upstream/UI5
         window.location.assign(`${baseUrl}/oauth2/authorization/${provider}`);
     };
 
@@ -296,12 +259,9 @@ const SignUpPage = () => {
                     <div>
                         <h2 className="text-3xl font-bold mb-2">계정 생성</h2>
                         <p className="text-[color:var(--text-muted)]">필수 정보를 입력해 주세요.</p>
-<<<<<<< HEAD
-=======
                         <p className="mt-2 text-sm text-[color:var(--text-soft)]">
                             소셜 회원가입을 원할 시, 필수 동의 항목 4가지 체크 후 맨 아래 소셜 회원가입 버튼을 클릭해주세요.
                         </p>
->>>>>>> upstream/UI5
                     </div>
                 </div>
 

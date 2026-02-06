@@ -21,9 +21,6 @@ public interface UserInfoRepository extends JpaRepository<UserInfo, Integer> {
     boolean existsByUserNameAndUserState(String userName, String userState);
 
     Optional<UserInfo> findByProviderAndProviderId(String provider, String providerId);
-<<<<<<< HEAD
-=======
 
     List<UserInfo> findByUserIdIn(List<String> userIds);
->>>>>>> upstream/UI5
 }

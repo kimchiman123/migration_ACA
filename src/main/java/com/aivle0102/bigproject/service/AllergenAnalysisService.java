@@ -32,15 +32,6 @@ import com.aivle0102.bigproject.dto.ReportRequest;
 import com.aivle0102.bigproject.util.RecipeIngredientExtractor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-<<<<<<< HEAD
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -52,10 +43,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
-=======
-
 import lombok.RequiredArgsConstructor;
->>>>>>> upstream/UI5
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 @Service
 @RequiredArgsConstructor
@@ -95,10 +90,7 @@ public class AllergenAnalysisService {
             case "IN": return "IN";
             case "VN": return "VN";
             case "TH": return "TH";
-<<<<<<< HEAD
-=======
             case "KR": return "KR";
->>>>>>> upstream/UI5
             default:
                 break;
         }
@@ -112,19 +104,13 @@ public class AllergenAnalysisService {
             case "인도": return "IN";
             case "베트남": return "VN";
             case "태국": return "TH";
-<<<<<<< HEAD
-=======
             case "한국": return "KR";
             case "대한민국": return "KR";
->>>>>>> upstream/UI5
             default:
                 return upper;
         }
     }
-<<<<<<< HEAD
-=======
 
->>>>>>> upstream/UI5
     private final RestTemplate restTemplate = new RestTemplate();
 
     public AllergenAnalysisResponse analyze(ReportRequest request) {
@@ -285,11 +271,7 @@ public class AllergenAnalysisService {
             List<String> prdkindCandidates = plan.prdkindCandidates();
             List<String> prdlstNmCandidates = plan.prdlstNmCandidates();
 
-<<<<<<< HEAD
-            LOGGER.info(() -> "STEP3 catalog fallback for ingredient=" + ingredient
-=======
             LOGGER.info(() -> "STEP3 카탈로그 폴백: 재료=" + ingredient
->>>>>>> upstream/UI5
                     + " prdkindCandidates=" + prdkindCandidates
                     + " prdlstNmCandidates=" + prdlstNmCandidates);
 
@@ -297,11 +279,7 @@ public class AllergenAnalysisService {
             strategy = "CATALOG_PRDKIND_SIMILARITY";
 
             if (items.isEmpty()) {
-<<<<<<< HEAD
-                LOGGER.info(() -> "STEP3 prdkind search empty; switching to prdlstNm for ingredient=" + ingredient);
-=======
                 LOGGER.info(() -> "STEP3 prdkind 검색 결과 없음; prdlstNm으로 전환: 재료=" + ingredient);
->>>>>>> upstream/UI5
                 items = searchItemsByPrdlstNmQueries(prdlstNmCandidates);
                 strategy = "CATALOG_PRDLSTNM_SIMILARITY";
                 items = filterExactPrdlstNmMatches(items, prdlstNmCandidates, true);
@@ -315,11 +293,7 @@ public class AllergenAnalysisService {
                     List.of()
             );
             if (!aiCandidates.isEmpty()) {
-<<<<<<< HEAD
-                LOGGER.info(() -> "STEP3 AI fallback for ingredient=" + ingredient + " prdlstNmCandidates=" + aiCandidates);
-=======
                 LOGGER.info(() -> "STEP3 AI 폴백: 재료=" + ingredient + " prdlstNmCandidates=" + aiCandidates);
->>>>>>> upstream/UI5
                 items = searchItemsByPrdlstNmQueries(aiCandidates);
                 strategy = "AI_PRDLSTNM_EXPANSION|AI_AGENT_USED";
                 items = filterExactPrdlstNmMatches(items, aiCandidates, true);
@@ -330,11 +304,7 @@ public class AllergenAnalysisService {
     }
 
     private IngredientEvidence buildEvidenceFromItems(String ingredient, List<JsonNode> items, List<String> obligation, String strategy) {
-<<<<<<< HEAD
-        // HACCP results: allergy/rawmtrl based matching
-=======
         // HACCP 결과: 알레르기/원재료 기반 매칭
->>>>>>> upstream/UI5
         if (items == null || items.isEmpty()) {
             return IngredientEvidence.builder()
                     .ingredient(ingredient)
@@ -379,11 +349,7 @@ public class AllergenAnalysisService {
                 } else if (exactProductMatch && !unknownAllergy) {
                     canonicalCandidates.addAll(allergenMatcher.extractCanonicalFromHaccpAllergyText(allergyRaw));
                 } else {
-<<<<<<< HEAD
-                    // Avoid over-matching for non-exact products.
-=======
                     // 정확하지 않은 제품에 대한 과도한 매칭은 제외 처리..
->>>>>>> upstream/UI5
                 }
             }
 
@@ -467,11 +433,7 @@ public class AllergenAnalysisService {
             }
         }
         if (!exact.isEmpty()) {
-<<<<<<< HEAD
-            LOGGER.info(() -> "STEP3 prdlstNm exact matches=" + exact.size());
-=======
             LOGGER.info(() -> "STEP3 prdlstNm 정확 일치 개수=" + exact.size());
->>>>>>> upstream/UI5
             return exact;
         }
         List<JsonNode> contains = new ArrayList<>();
@@ -486,11 +448,7 @@ public class AllergenAnalysisService {
             }
         }
         if (!contains.isEmpty()) {
-<<<<<<< HEAD
-            LOGGER.info(() -> "STEP3 prdlstNm contains matches=" + contains.size());
-=======
             LOGGER.info(() -> "STEP3 prdlstNm 포함 일치 개수=" + contains.size());
->>>>>>> upstream/UI5
             return contains;
         }
         return requireExact ? List.of() : items;
@@ -905,8 +863,4 @@ public class AllergenAnalysisService {
             case OTHER -> false;
         };
     }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> upstream/UI5

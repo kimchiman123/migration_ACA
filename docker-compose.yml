@@ -102,6 +102,9 @@ services:
     volumes:
       - ./analysis-engine/cleaned_merged_export_trends.csv:/app/cleaned_merged_export_trends.csv
       - ./analysis-engine/amz_insight_data.csv:/app/amz_insight_data.csv
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SERPAPI_API_KEY=${SERPAPI_API_KEY}
     ports:
       - "8000:8000"
     networks:

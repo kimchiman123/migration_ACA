@@ -33,17 +33,6 @@ public class AllergenCatalogLoader {
     @Getter
     private Map<String, List<String>> countryToAllergens = new HashMap<>();
 
-<<<<<<< HEAD
-    // countryCode -> country display name
-    @Getter
-    private Map<String, String> countryToName = new HashMap<>();
-
-    // countryCode -> legal basis list
-    @Getter
-    private Map<String, List<String>> countryToLegalBasis = new HashMap<>();
-
-    // gluten cereals reference list (e.g., Wheat, Barley, Rye, Oats, Kamut)
-=======
     // countryCode -> 국가 표시명
     @Getter
     private Map<String, String> countryToName = new HashMap<>();
@@ -53,7 +42,6 @@ public class AllergenCatalogLoader {
     private Map<String, List<String>> countryToLegalBasis = new HashMap<>();
 
     // 글루텐 곡류 참고 목록 (예: Wheat, Barley, Rye, Oats, Kamut)
->>>>>>> upstream/UI5
     @Getter
     private List<String> glutenCereals = new ArrayList<>();
 

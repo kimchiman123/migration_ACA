@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS company
 CREATE TABLE IF NOT EXISTS userinfo (
     userSeq BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     userId VARCHAR(50) NOT NULL,
-    userPw VARCHAR(255) NOT NULL,
+    userPw VARCHAR(255) NOT NULL, 
     userName VARCHAR(50) NOT NULL,
     userState CHAR(1) NOT NULL DEFAULT '1',
     joinDate TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -21,37 +21,29 @@ CREATE TABLE IF NOT EXISTS userinfo (
     provider VARCHAR(20),
     providerid VARCHAR(100),
     birthdate DATE,
-<<<<<<< HEAD
     password_changed_at TIMESTAMP NOT NULL DEFAULT NOW()
-=======
-    password_changed_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    company_id BIGINT REFERENCES company(company_id)
->>>>>>> upstream/UI5
-    );
+);
 
 CREATE UNIQUE INDEX IF NOT EXISTS ux_userinfo_userid ON userinfo (userId);
 
-<<<<<<< HEAD
+-- company_id 컬럼 추가 (기존 테이블 존재 시 대응)
+ALTER TABLE userinfo ADD COLUMN IF NOT EXISTS company_id BIGINT REFERENCES company(company_id);
 
-=======
->>>>>>> upstream/UI5
 --notice(공지사항) 테이블
 CREATE TABLE IF NOT EXISTS notice (
     notice_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     title VARCHAR(200) NOT NULL,
     content TEXT NOT NULL,
     user_id VARCHAR(50) NOT NULL REFERENCES userinfo(userId),
-<<<<<<< HEAD
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-=======
-    company_id BIGINT REFERENCES company(company_id),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_notice_company_id ON notice(company_id);
->>>>>>> upstream/UI5
+
+-- company_id 컬럼 추가 (기존 테이블 존재 시 대응)
+ALTER TABLE notice ADD COLUMN IF NOT EXISTS company_id BIGINT REFERENCES company(company_id);
+
+CREATE INDEX IF NOT EXISTS idx_notice_company_id
+    ON notice(company_id);
 
 --notice_comment(공지사항 댓글) 테이블
 CREATE TABLE IF NOT EXISTS notice_comment (
@@ -62,11 +54,8 @@ CREATE TABLE IF NOT EXISTS notice_comment (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+ 
 
-<<<<<<< HEAD
-
-=======
->>>>>>> upstream/UI5
 --recipe(레시피 & 메뉴 개발) 테이블
 CREATE TABLE IF NOT EXISTS recipe (
     recipe_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -74,25 +63,22 @@ CREATE TABLE IF NOT EXISTS recipe (
     description TEXT,
     image_base64 TEXT,
     steps TEXT,
-    status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
-<<<<<<< HEAD
-=======
-    open_yn VARCHAR(1) NOT NULL DEFAULT 'Y' CHECK (open_yn IN ('Y','N')),
->>>>>>> upstream/UI5
+    status VARCHAR(20) NOT NULL DEFAULT 'PUBLISHED',
+    open_yn VARCHAR(1) NOT NULL DEFAULT 'Y' CHECK (open_yn IN ('Y','N')), -- 기존 schema.sql의 기능 유지
     user_id VARCHAR(50) NOT NULL REFERENCES userinfo(userId),
     company_id BIGINT REFERENCES company(company_id),
 
     base_recipe_id BIGINT REFERENCES recipe(recipe_id),
     target_country VARCHAR(50),
-
+    
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-<<<<<<< HEAD
+-- recipe 테이블에 컬럼이 없을 경우를 대비한 ALTER
+ALTER TABLE recipe ADD COLUMN IF NOT EXISTS open_yn VARCHAR(1) NOT NULL DEFAULT 'Y' CHECK (open_yn IN ('Y','N'));
+ALTER TABLE recipe ADD COLUMN IF NOT EXISTS company_id BIGINT REFERENCES company(company_id);
 
-=======
->>>>>>> upstream/UI5
 --recipe_ingredient(레시피 재료) 테이블
 CREATE TABLE IF NOT EXISTS recipe_ingredient
 (
@@ -104,10 +90,6 @@ CREATE TABLE IF NOT EXISTS recipe_ingredient
     cost                  NUMERIC(10, 2)
 );
 
-<<<<<<< HEAD
-
-=======
->>>>>>> upstream/UI5
 --recipe_nonconforming_case(수출 부적합) 테이블
 CREATE TABLE IF NOT EXISTS recipe_nonconforming_case
 (
@@ -122,12 +104,9 @@ CREATE TABLE IF NOT EXISTS recipe_nonconforming_case
     matched_ingredient VARCHAR(255),
     created_at         TIMESTAMP    NOT NULL DEFAULT NOW()
 );
-
-<<<<<<< HEAD
-
-=======
->>>>>>> upstream/UI5
---recipe_allergen 테이블: 알레르기 성분 검출 기능 관련 사용
+ 
+ 
+--recipe_allergen 테이블: 알레르기 성분 검출 기능 관련 사용 
 CREATE TABLE IF NOT EXISTS recipe_allergen (
     recipe_allergen_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, -- 알레르기 검출 결과 고유 ID
     recipe_id BIGINT NOT NULL REFERENCES recipe(recipe_id) ON DELETE CASCADE,
@@ -141,11 +120,8 @@ CREATE TABLE IF NOT EXISTS recipe_allergen (
     UNIQUE (recipe_id, ingredient_id, target_country, matched_allergen)
     -- 같은 레시피/재료/국가 조합에서 동일 알레르기 성분이 중복 저장되지 않도록 제약
 );
+    
 
-<<<<<<< HEAD
-
-=======
->>>>>>> upstream/UI5
 -- market_report(보고서) 테이블
 CREATE TABLE IF NOT EXISTS market_report (
     report_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -153,13 +129,12 @@ CREATE TABLE IF NOT EXISTS market_report (
     report_type VARCHAR(20) NOT NULL, -- SWOT / KPI 등
     content TEXT NOT NULL,
     summary TEXT,
-<<<<<<< HEAD
-=======
-    open_yn VARCHAR(1) NOT NULL DEFAULT 'Y' CHECK (open_yn IN ('Y','N')),
->>>>>>> upstream/UI5
+    open_yn VARCHAR(1) NOT NULL DEFAULT 'Y' CHECK (open_yn IN ('Y','N')), -- 기존 schema.sql의 기능 유지
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE market_report ADD COLUMN IF NOT EXISTS open_yn VARCHAR(1) NOT NULL DEFAULT 'Y' CHECK (open_yn IN ('Y','N'));
 
 CREATE INDEX IF NOT EXISTS idx_market_report_recipe
     ON market_report (recipe_id);
@@ -177,10 +152,7 @@ CREATE TABLE IF NOT EXISTS influencer (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-<<<<<<< HEAD
-
-=======
->>>>>>> upstream/UI5
+ 
 --virtual_consumer 가상 소비자(AI 페르소나 심사위원) 테이블
 CREATE TABLE IF NOT EXISTS virtual_consumer (
     consumerId BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -195,7 +167,7 @@ CREATE TABLE IF NOT EXISTS virtual_consumer (
     attitudeToKFood TEXT,
     evaluationPerspective TEXT
  );
-
+    
 -- 중복 방지 유니크 인덱스
 CREATE UNIQUE INDEX IF NOT EXISTS ux_virtual_consumer_report_persona
 ON virtual_consumer (report_id, personaName, country, ageGroup);
@@ -204,11 +176,6 @@ ON virtual_consumer (report_id, personaName, country, ageGroup);
 CREATE INDEX IF NOT EXISTS ix_virtual_consumer_report
 ON virtual_consumer (report_id);
 
-<<<<<<< HEAD
-
-
-=======
->>>>>>> upstream/UI5
 -- consumer_feedback (AI 심사위원 피드백) 테이블
 CREATE TABLE IF NOT EXISTS consumer_feedback (
     feedbackId BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -221,12 +188,12 @@ CREATE TABLE IF NOT EXISTS consumer_feedback (
     healthScore INT NOT NULL,
     positiveFeedback TEXT,
     negativeFeedback TEXT,
-    purchaseIntent VARCHAR(10),
+    purchaseIntent VARCHAR(10),  
     createdAt TIMESTAMP NOT NULL DEFAULT NOW(),
-
+ 
     CONSTRAINT fk_consumer_feedback_consumer
         FOREIGN KEY (consumerId) REFERENCES virtual_consumer (consumerid) ON DELETE CASCADE
-);
+); 
 
 -- report_id + consumerId 중복 방지
 CREATE UNIQUE INDEX IF NOT EXISTS ux_consumer_feedback_report_consumer
@@ -234,8 +201,4 @@ ON consumer_feedback (report_id, consumerId);
 
 -- 리포트별 조회 성능
 CREATE INDEX IF NOT EXISTS ix_consumer_feedback_report
-<<<<<<< HEAD
 ON consumer_feedback (report_id);
-=======
-ON consumer_feedback (report_id);
->>>>>>> upstream/UI5

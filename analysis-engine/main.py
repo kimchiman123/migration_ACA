@@ -14,6 +14,8 @@ import os
 from scipy.stats import linregress
 from sklearn.feature_extraction.text import CountVectorizer
 from collections import Counter
+import gradio as gr
+from chatbot_app import demo as chatbot_demo
 
 # 국가 매핑
 COUNTRY_MAPPING = {
@@ -418,6 +420,9 @@ async def lifespan(app: FastAPI):
     print("서버를 종료합니다.")
 
 app = FastAPI(title="K-Food Export Analysis Engine", lifespan=lifespan)
+
+# Chatbot Integration
+app = gr.mount_gradio_app(app, chatbot_demo, path="/chatbot")
 
 app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"]

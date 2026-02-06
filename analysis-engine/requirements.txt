@@ -5,3 +5,7 @@ plotly==5.18.0
 scikit-learn==1.4.0
 numpy
 python-multipart
+gradio
+langchain-openai
+langgraph
+openai

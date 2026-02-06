@@ -5,10 +5,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-<<<<<<< HEAD
 import jakarta.servlet.http.HttpServletRequest;
-=======
->>>>>>> upstream/UI5
 import java.util.Map;
 
 @RestController
@@ -16,23 +13,11 @@ import java.util.Map;
 public class CsrfController {
 
     @GetMapping("/csrf")
-<<<<<<< HEAD
-    public Map<String, String> csrf(HttpServletRequest request) {
-        CsrfToken token = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
-        if (token == null) {
-            return Map.of("message", "CSRF is disabled");
-        }
-        return Map.of(
-                "headerName", token.getHeaderName(),
-                "parameterName", token.getParameterName(),
-                "token", token.getToken());
-=======
     public Map<String, String> csrf(CsrfToken token) {
         return Map.of(
                 "headerName", token.getHeaderName(),
                 "parameterName", token.getParameterName(),
                 "token", token.getToken()
         );
->>>>>>> upstream/UI5
     }
 }

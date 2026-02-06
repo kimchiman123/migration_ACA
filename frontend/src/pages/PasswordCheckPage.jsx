@@ -16,12 +16,8 @@ const PasswordCheckPage = () => {
             return;
         }
         try {
-<<<<<<< HEAD
-            await axiosInstance.post('/user/verify-password', { password });
-=======
             await axiosInstance.get('/api/csrf');
             await axiosInstance.post('/api/user/verify-password', { password });
->>>>>>> upstream/UI5
             navigate('/mainboard/user-hub/profile');
         } catch (err) {
             console.error(err);

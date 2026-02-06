@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 import React, { useEffect, useState } from 'react';
-=======
-﻿import React, { useEffect, useState } from 'react';
->>>>>>> upstream/UI5
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../axiosConfig';
@@ -14,33 +10,20 @@ const UserBoard = () => {
     const maskedName = rawName.length <= 1 ? '*' : `${rawName.slice(0, -1)}*`;
 
     const [recipes, setRecipes] = useState([]);
-<<<<<<< HEAD
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-=======
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [publishLoadingId, setPublishLoadingId] = useState(null);
->>>>>>> upstream/UI5
 
     useEffect(() => {
         const fetchRecipes = async () => {
             try {
                 setLoading(true);
-<<<<<<< HEAD
-                const res = await axiosInstance.get('/recipes/me');
-                setRecipes(res.data || []);
-            } catch (err) {
-                console.error('Failed to fetch user recipes', err);
-                setError('내 레시피 목록을 불러오지 못했습니다.');
-=======
                 const res = await axiosInstance.get('/api/recipes/me');
                 setRecipes(res.data || []);
             } catch (err) {
                 console.error('레시피 목록을 불러오지 못했습니다.', err);
                 setError('레시피 목록을 불러오지 못했습니다.');
->>>>>>> upstream/UI5
             } finally {
                 setLoading(false);
             }
@@ -49,8 +32,6 @@ const UserBoard = () => {
         fetchRecipes();
     }, []);
 
-<<<<<<< HEAD
-=======
     const handlePublish = async (recipe) => {
         if (!recipe || recipe.status === 'PUBLISHED') {
             return;
@@ -75,7 +56,6 @@ const UserBoard = () => {
         ? recipes.filter((recipe) => (recipe.title || '').toLowerCase().includes(normalizedSearch))
         : recipes;
 
->>>>>>> upstream/UI5
     return (
         <div className="relative">
             <div className="pointer-events-none absolute -top-16 -right-6 h-64 w-64 rounded-full bg-[color:var(--bg-3)] blur-3xl opacity-70" />
@@ -98,41 +78,6 @@ const UserBoard = () => {
                     </div>
                 </div>
 
-<<<<<<< HEAD
-                <div className="mt-8">
-                    {loading && <span className="text-sm text-[color:var(--text-muted)]">레시피를 불러오는 중입니다.</span>}
-                </div>
-
-                {error && (
-                    <div className="mt-4 text-sm text-[color:var(--danger)]">{error}</div>
-                )}
-
-                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {recipes.map((recipe) => (
-                        <button
-                            type="button"
-                            key={recipe.id}
-                            onClick={() => navigate(`/mainboard/recipes/${recipe.id}`)}
-                            className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface)] shadow-[0_12px_30px_var(--shadow)] overflow-hidden text-left"
-                        >
-                            <div className="h-32 bg-[color:var(--surface-muted)] flex items-center justify-center text-sm text-[color:var(--text-soft)] overflow-hidden">
-                                {recipe.imageBase64 ? (
-                                    <img src={recipe.imageBase64} alt={recipe.title} className="h-full w-full object-cover" />
-                                ) : (
-                                    '이미지 영역'
-                                )}
-                            </div>
-                            <div className="bg-[color:var(--accent)] text-[color:var(--accent-contrast)] text-center text-sm font-semibold py-2">
-                                {recipe.title}
-                            </div>
-                        </button>
-                    ))}
-                </div>
-
-                {!loading && recipes.length === 0 && (
-                    <p className="mt-6 text-sm text-[color:var(--text-muted)]">등록된 레시피가 없습니다.</p>
-                )}
-=======
                 <div className="mt-6">
                     <label className="block text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--text-soft)] mb-2">
                         레시피 검색
@@ -212,7 +157,6 @@ const UserBoard = () => {
                 {!loading && recipes.length > 0 && filteredRecipes.length === 0 && (
                     <p className="mt-6 text-sm text-[color:var(--text-muted)]">일치하는 레시피가 없습니다.</p>
                 )}
->>>>>>> upstream/UI5
             </div>
         </div>
     );

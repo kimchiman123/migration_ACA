@@ -2,19 +2,12 @@ package com.aivle0102.bigproject.service;
 
 import com.aivle0102.bigproject.domain.RecipeNonconformingCase;
 import com.aivle0102.bigproject.dto.IngredientCases;
-<<<<<<< HEAD
-
-=======
 import com.aivle0102.bigproject.dto.ProductCases;
->>>>>>> upstream/UI5
 import com.aivle0102.bigproject.dto.RecipeCaseRequest;
 import com.aivle0102.bigproject.dto.RecipeCaseResponse;
 import com.aivle0102.bigproject.dto.RegulatoryCase;
 import com.aivle0102.bigproject.repository.RecipeNonconformingCaseRepository;
-<<<<<<< HEAD
-=======
 import com.aivle0102.bigproject.util.RecipeIngredientExtractor;
->>>>>>> upstream/UI5
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
@@ -44,13 +37,10 @@ public class RecipeCaseServiceImpl implements RecipeCaseService {
 
     @Override
     public RecipeCaseResponse findCases(RecipeCaseRequest request) {
-<<<<<<< HEAD
-=======
         System.out.println("========== EXPORT RISK DEBUG ==========");
         System.out.println("[RAW REQUEST RECIPE] = " + request.getRecipe());
         System.out.println("[RECIPE ID] = " + request.getRecipeId());
 
->>>>>>> upstream/UI5
         List<SearchRow> searchRows = getSearchRows();
         Map<String, InfoRow> infoByCaseId = getInfoByCaseId();
 
@@ -62,19 +52,6 @@ public class RecipeCaseServiceImpl implements RecipeCaseService {
         List<RegulatoryCase> productCases = new ArrayList<>();
         if (parsed.productName != null && !parsed.productName.isBlank()) {
             for (SearchRow row : searchRows) {
-<<<<<<< HEAD
-                if (row.ingredientKeyword == null)
-                    continue;
-                if (!isFinishedOrProcessed(row.ingredientType))
-                    continue;
-                if (!hasTokenOverlap(parsed.productName, row.ingredientKeyword))
-                    continue;
-
-                InfoRow info = infoByCaseId.get(row.caseId);
-                if (info == null)
-                    continue;
-
-=======
                 if (row.ingredientKeyword == null) continue;
                 if (!isFinishedOrProcessed(row.ingredientType)) continue;
                 if (!hasTokenOverlap(parsed.productName, row.ingredientKeyword)) {
@@ -87,7 +64,6 @@ public class RecipeCaseServiceImpl implements RecipeCaseService {
                 System.out.println("[MATCH - PRODUCT] product="
                         + parsed.productName + " / keyword=" + row.ingredientKeyword
                         + " / caseId=" + info.caseId);
->>>>>>> upstream/UI5
                 addCase(productCases, toSave, request.getRecipeId(), info, row.ingredientKeyword);
             }
         }
@@ -98,17 +74,6 @@ public class RecipeCaseServiceImpl implements RecipeCaseService {
             List<RegulatoryCase> cases = new ArrayList<>();
 
             for (SearchRow row : searchRows) {
-<<<<<<< HEAD
-                if (row.ingredientKeyword == null)
-                    continue;
-                if (!hasExactTokenMatch(row.ingredientKeyword, ingredient))
-                    continue;
-
-                InfoRow info = infoByCaseId.get(row.caseId);
-                if (info == null)
-                    continue;
-
-=======
                 if (row.ingredientKeyword == null) continue;
                 if (!hasExactTokenMatch(row.ingredientKeyword, ingredient)) {
                     continue;
@@ -120,7 +85,6 @@ public class RecipeCaseServiceImpl implements RecipeCaseService {
                 System.out.println("[MATCH - INGREDIENT] ingredient="
                         + ingredient + " / keyword=" + row.ingredientKeyword
                         + " / caseId=" + info.caseId);
->>>>>>> upstream/UI5
                 addCase(cases, toSave, request.getRecipeId(), info, row.ingredientKeyword);
             }
 
@@ -130,14 +94,6 @@ public class RecipeCaseServiceImpl implements RecipeCaseService {
                     .build());
         }
 
-<<<<<<< HEAD
-        if (!toSave.isEmpty()) {
-            recipeNonconformingCaseRepository.saveAll(toSave);
-        }
-
-        return RecipeCaseResponse.builder()
-                .productCases(productCases)
-=======
 //        if (!toSave.isEmpty()) {
 //            recipeNonconformingCaseRepository.saveAll(toSave);
 //        }
@@ -147,23 +103,15 @@ public class RecipeCaseServiceImpl implements RecipeCaseService {
                         .product(parsed.productName)
                         .cases(productCases)
                         .build())
->>>>>>> upstream/UI5
                 .ingredientCases(ingredientCasesList)
                 .build();
     }
 
     private void addCase(List<RegulatoryCase> cases,
-<<<<<<< HEAD
-            List<RecipeNonconformingCase> toSave,
-            Long recipeId,
-            InfoRow info,
-            String matchedKeyword) {
-=======
                          List<RecipeNonconformingCase> toSave,
                          Long recipeId,
                          InfoRow info,
                          String matchedKeyword) {
->>>>>>> upstream/UI5
 
         cases.add(RegulatoryCase.builder()
                 .caseId(info.caseId)
@@ -188,12 +136,7 @@ public class RecipeCaseServiceImpl implements RecipeCaseService {
     }
 
     private boolean isFinishedOrProcessed(String type) {
-<<<<<<< HEAD
-        if (type == null)
-            return false;
-=======
         if (type == null) return false;
->>>>>>> upstream/UI5
         String upper = type.toUpperCase(Locale.ROOT);
         return TYPE_FINISHED.equals(upper) || TYPE_PROCESSED.equals(upper);
     }
@@ -202,40 +145,22 @@ public class RecipeCaseServiceImpl implements RecipeCaseService {
         if (recipe == null) {
             return new ParsedRecipe(null, List.of());
         }
-<<<<<<< HEAD
-        int idx = recipe.indexOf(':');
-        if (idx == -1) {
-=======
 
         int idx = recipe.indexOf(':');
         if (idx == -1) {
             // 제품명만 있고 재료가 없는 경우
->>>>>>> upstream/UI5
             return new ParsedRecipe(recipe.trim(), List.of());
         }
 
         String product = recipe.substring(0, idx).trim();
         String right = recipe.substring(idx + 1).trim();
 
-<<<<<<< HEAD
-        List<String> ingredients = new ArrayList<>();
-        if (!right.isBlank()) {
-            String[] parts = right.split(",");
-            for (String p : parts) {
-                String t = p.trim();
-                if (!t.isBlank()) {
-                    ingredients.add(t);
-                }
-            }
-        }
-=======
         // 🔥 재료 정제 유틸 사용
         List<String> ingredients =
                 RecipeIngredientExtractor.extractIngredients(right);
 
         System.out.println("[EXPORT RISK] product = " + product);
         System.out.println("[EXPORT RISK] ingredients = " + ingredients);
->>>>>>> upstream/UI5
 
         return new ParsedRecipe(product, ingredients);
     }
@@ -268,12 +193,7 @@ public class RecipeCaseServiceImpl implements RecipeCaseService {
         List<SearchRow> rows = new ArrayList<>();
         try (Reader reader = new InputStreamReader(
                 new ClassPathResource("data/recipe_inspection_basis_search.csv")
-<<<<<<< HEAD
-                        .getInputStream(),
-                StandardCharsets.UTF_8)) {
-=======
                         .getInputStream(), StandardCharsets.UTF_8)) {
->>>>>>> upstream/UI5
 
             CSVFormat format = CSVFormat.DEFAULT.builder()
                     .setHeader()
@@ -291,22 +211,13 @@ public class RecipeCaseServiceImpl implements RecipeCaseService {
                 rows.add(row);
             }
         } catch (IOException e) {
-<<<<<<< HEAD
-            throw new IllegalStateException("search CSV load failed", e);
-=======
             throw new IllegalStateException("search CSV 로드에 실패했습니다.", e);
->>>>>>> upstream/UI5
         }
         return rows;
     }
 
     private boolean hasTokenOverlap(String productName, String keyword) {
-<<<<<<< HEAD
-        if (productName == null || keyword == null)
-            return false;
-=======
         if (productName == null || keyword == null) return false;
->>>>>>> upstream/UI5
 
         List<String> productTokens = tokenize(productName);
         List<String> keywordTokens = tokenize(keyword);
@@ -323,44 +234,24 @@ public class RecipeCaseServiceImpl implements RecipeCaseService {
 
     private List<String> tokenize(String text) {
         String normalized = text.replaceAll("[^\\p{IsAlphabetic}\\p{IsDigit}]+", " ").trim();
-<<<<<<< HEAD
-        if (normalized.isBlank())
-            return List.of();
-=======
         if (normalized.isBlank()) return List.of();
->>>>>>> upstream/UI5
 
         String[] parts = normalized.split("\\s+");
         List<String> tokens = new ArrayList<>();
         for (String p : parts) {
             String t = p.trim();
-<<<<<<< HEAD
-            if (t.isEmpty())
-                continue;
-=======
             if (t.isEmpty()) continue;
->>>>>>> upstream/UI5
             tokens.add(t);
         }
         return tokens;
     }
 
     private boolean hasExactTokenMatch(String keyword, String ingredient) {
-<<<<<<< HEAD
-        if (keyword == null || ingredient == null)
-            return false;
-
-        List<String> keywordTokens = tokenize(keyword);
-        List<String> ingredientTokens = tokenize(ingredient);
-        if (ingredientTokens.isEmpty() || keywordTokens.isEmpty())
-            return false;
-=======
         if (keyword == null || ingredient == null) return false;
 
         List<String> keywordTokens = tokenize(keyword);
         List<String> ingredientTokens = tokenize(ingredient);
         if (ingredientTokens.isEmpty() || keywordTokens.isEmpty()) return false;
->>>>>>> upstream/UI5
 
         if (ingredientTokens.size() == 1) {
             return keywordTokens.contains(ingredientTokens.get(0));
@@ -385,12 +276,7 @@ public class RecipeCaseServiceImpl implements RecipeCaseService {
         Map<String, InfoRow> rows = new HashMap<>();
         try (Reader reader = new InputStreamReader(
                 new ClassPathResource("data/regulatory_cases.csv")
-<<<<<<< HEAD
-                        .getInputStream(),
-                StandardCharsets.UTF_8)) {
-=======
                         .getInputStream(), StandardCharsets.UTF_8)) {
->>>>>>> upstream/UI5
 
             CSVFormat format = CSVFormat.DEFAULT.builder()
                     .setHeader()
@@ -410,11 +296,7 @@ public class RecipeCaseServiceImpl implements RecipeCaseService {
                 rows.put(row.caseId, row);
             }
         } catch (IOException e) {
-<<<<<<< HEAD
-            throw new IllegalStateException("info CSV load failed", e);
-=======
             throw new IllegalStateException("info CSV 로드에 실패했습니다.", e);
->>>>>>> upstream/UI5
         }
         return rows;
     }

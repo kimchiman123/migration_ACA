@@ -5,10 +5,7 @@ import com.aivle0102.bigproject.dto.RecipePublishRequest;
 import com.aivle0102.bigproject.dto.RecipeResponse;
 import com.aivle0102.bigproject.dto.RecipeTargetRecommendRequest;
 import com.aivle0102.bigproject.dto.RecipeTargetRecommendResponse;
-<<<<<<< HEAD
-=======
 import com.aivle0102.bigproject.dto.VisibilityUpdateRequest;
->>>>>>> upstream/UI5
 import com.aivle0102.bigproject.service.RecipeService;
 import com.aivle0102.bigproject.service.RecipeTargetRecommendationService;
 import lombok.RequiredArgsConstructor;
@@ -44,14 +41,9 @@ public class RecipeController {
     }
 
     @GetMapping
-<<<<<<< HEAD
-    public ResponseEntity<List<RecipeResponse>> getAll() {
-        return ResponseEntity.ok(recipeService.getAll());
-=======
     public ResponseEntity<List<RecipeResponse>> getAll(Principal principal) {
         String requester = principal == null ? null : principal.getName();
         return ResponseEntity.ok(recipeService.getAll(requester));
->>>>>>> upstream/UI5
     }
 
     @GetMapping("/me")
@@ -80,8 +72,6 @@ public class RecipeController {
         return ResponseEntity.ok(recipeService.publish(id, principal.getName(), request));
     }
 
-<<<<<<< HEAD
-=======
     @PutMapping("/{id}/influencers")
     public ResponseEntity<RecipeResponse> saveInfluencers(
             @PathVariable("id") Long id,
@@ -94,7 +84,6 @@ public class RecipeController {
         return ResponseEntity.ok(recipeService.saveInfluencers(id, principal.getName(), request));
     }
 
->>>>>>> upstream/UI5
     @PutMapping("/{id}")
     public ResponseEntity<RecipeResponse> update(@PathVariable("id") Long id, @RequestBody RecipeCreateRequest request, Principal principal) {
         if (principal == null) {
@@ -103,8 +92,6 @@ public class RecipeController {
         return ResponseEntity.ok(recipeService.update(id, principal.getName(), request));
     }
 
-<<<<<<< HEAD
-=======
     @PutMapping("/{id}/visibility")
     public ResponseEntity<RecipeResponse> updateVisibility(
             @PathVariable("id") Long id,
@@ -117,7 +104,6 @@ public class RecipeController {
         return ResponseEntity.ok(recipeService.updateRecipeVisibility(id, principal.getName(), request));
     }
 
->>>>>>> upstream/UI5
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable("id") Long id, Principal principal) {
         if (principal == null) {

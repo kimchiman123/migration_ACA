@@ -23,14 +23,10 @@ public class RecipeResponse {
     private List<Map<String, Object>> influencers;
     private String influencerImageBase64;
     private String status;
-<<<<<<< HEAD
-    private String userId;
-=======
     private String openYn;
     @JsonProperty("user_id")
     private String userId;
     @JsonProperty("user_name")
->>>>>>> upstream/UI5
     private String userName;
     private LocalDateTime createdAt;
 }
