@@ -287,23 +287,23 @@ def load_data_background():
     global df, growth_summary_df
     global GLOBAL_MEAN_SENTIMENT, GLOBAL_STD_SENTIMENT, GLOBAL_MEAN_RATING
 
-    print("🚀 [Background] Starting Data Loading...")
+    print("🚀 [Background] Starting Data Loading...", flush=True)
     
-    # Retry mechanism: Wait for DB migration if needed
-    max_retries = 5
+    # Retry mechanism: Wait for DB migration if needed (Up to 5 minutes)
+    max_retries = 60 
     for i in range(max_retries):
         conn = get_db_connection()
         if conn:
             try:
                 # 1. Load Export Trends
-                print("Loading export_trends from DB...")
+                print(f"Loading export_trends from DB (Attempt {i+1}/{max_retries})...", flush=True)
                 query = "SELECT * FROM export_trends"
                 temp_df = pd.read_sql(query, conn)
                 
                 if not temp_df.empty:
                     # Expand JSONB trend_data if exists
                     if 'trend_data' in temp_df.columns:
-                        print("Expanding trend_data JSONB...")
+                        print("Expanding trend_data JSONB...", flush=True)
                         def parse_trend(x):
                             if isinstance(x, dict): return x
                             if isinstance(x, str):
@@ -321,7 +321,7 @@ def load_data_background():
                     df[numeric_cols] = df[numeric_cols].fillna(0)
                     
                     # Growth Matrix Calculation
-                    print("Calculating Growth Matrix...")
+                    print("Calculating Growth Matrix...", flush=True)
                     summaries = []
                     group_cols = ['country_code', 'item_name']
                     if 'country_code' not in df.columns:
@@ -358,38 +358,39 @@ def load_data_background():
                             'total_value': total_value
                         })
                     growth_summary_df = pd.DataFrame(summaries)
-                    print("Export Trends Loaded & Matrix Calculated.")
+                    print("Export Trends Loaded & Matrix Calculated.", flush=True)
+                    
+                    # 2. Global Consumer Stats (Only if step 1 success)
+                    print("Calculating Global Consumer Stats from DB...", flush=True)
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT AVG(sentiment_score), STDDEV(sentiment_score), AVG(rating) FROM amazon_reviews")
+                        row = cur.fetchone()
+                        if row and row[0] is not None:
+                                GLOBAL_MEAN_SENTIMENT = float(row[0])
+                                GLOBAL_STD_SENTIMENT = float(row[1]) if row[1] is not None else 0.3
+                                GLOBAL_MEAN_RATING = float(row[2])
+                                print(f"Global Stats: Sent={GLOBAL_MEAN_SENTIMENT:.2f}, Std={GLOBAL_STD_SENTIMENT:.2f}, Rating={GLOBAL_MEAN_RATING:.2f}", flush=True)
+                        else:
+                                print("⚠️ amazon_reviews table empty or stats unavailable.", flush=True)
+                    
+                    conn.close()
+                    break # Success, exit retry loop
+                    
                 else:
-                    print("⚠️ export_trends table is empty (might be migrating).")
-                    df = pd.DataFrame()
-                    growth_summary_df = pd.DataFrame()
-
-                # 2. Global Consumer Stats
-                print("Calculating Global Consumer Stats from DB...")
-                with conn.cursor() as cur:
-                    cur.execute("SELECT AVG(sentiment_score), STDDEV(sentiment_score), AVG(rating) FROM amazon_reviews")
-                    row = cur.fetchone()
-                    if row and row[0] is not None:
-                            GLOBAL_MEAN_SENTIMENT = float(row[0])
-                            GLOBAL_STD_SENTIMENT = float(row[1]) if row[1] is not None else 0.3
-                            GLOBAL_MEAN_RATING = float(row[2])
-                            print(f"Global Stats: Sent={GLOBAL_MEAN_SENTIMENT:.2f}, Std={GLOBAL_STD_SENTIMENT:.2f}, Rating={GLOBAL_MEAN_RATING:.2f}")
-                    else:
-                            print("⚠️ amazon_reviews table empty or stats unavailable.")
-                
-                conn.close()
-                break # Success, exit retry loop
+                    print(f"⚠️ export_trends table is empty. Migration might be in progress... (Attempt {i+1}/{max_retries})", flush=True)
+                    conn.close()
+                    time.sleep(5) # Wait for migration
 
             except Exception as e:
-                print(f"DB Load Failed (Attempt {i+1}/{max_retries}): {e}")
-                conn.close()
+                print(f"DB Load Failed (Attempt {i+1}/{max_retries}): {e}", flush=True)
+                if conn: conn.close()
                 time.sleep(5) # Wait before retry
         else:
-            print(f"DB Connection Failed (Attempt {i+1}/{max_retries}). Retrying in 5s...")
+            print(f"DB Connection Failed (Attempt {i+1}/{max_retries}). Retrying in 5s...", flush=True)
             time.sleep(5)
     
-    if df is None: 
-        print("❌ Final: Could not load data. App will run with empty state.")
+    if df is None or df.empty: 
+        print("❌ Final: Could not load data after retries. App will run with empty state.", flush=True)
         df = pd.DataFrame()
         growth_summary_df = pd.DataFrame()
 
@@ -400,7 +401,7 @@ async def lifespan(app: FastAPI):
     df = pd.DataFrame()
     growth_summary_df = pd.DataFrame()
 
-    print("🚀 Server Starting... Triggering Background Data Load.")
+    print("🚀 Server Starting... Triggering Background Data Load.", flush=True)
     
     # Start background thread for data loading
     # This prevents blocking the startup, so Readiness Probe can pass immediately.
@@ -408,7 +409,7 @@ async def lifespan(app: FastAPI):
     loader_thread.start()
 
     yield
-    print("Shutting down...")
+    print("Shutting down...", flush=True)
 
 app = FastAPI(title="K-Food Export Analysis Engine", lifespan=lifespan)
 
@@ -419,6 +420,19 @@ app.add_middleware(
 @app.get("/")
 async def root():
     return {"message": "K-Food Analysis Engine (Visual Analytics Mode)", "status": "Ready"}
+
+@app.get("/health/data")
+async def health_data():
+    """Check if data is loaded"""
+    return {
+        "data_loaded": not (df is None or df.empty),
+        "rows": len(df) if df is not None else 0,
+        "growth_matrix_rows": len(growth_summary_df) if growth_summary_df is not None else 0,
+        "global_stats": {
+            "sentiment": GLOBAL_MEAN_SENTIMENT,
+            "rating": GLOBAL_MEAN_RATING
+        }
+    }
 
 @app.get("/items")
 async def get_items():
