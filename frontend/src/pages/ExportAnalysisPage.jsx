@@ -24,7 +24,7 @@ const ExportAnalysisPage = () => {
     useEffect(() => {
         const fetchItems = async () => {
             try {
-                const response = await axios.get('/analysis-api/items');
+                const response = await axios.get('/api/analysis/items');
                 if (response.data && response.data.items && response.data.items.length > 0) {
                     setAvailableItems(response.data.items);
                 }
@@ -48,7 +48,7 @@ const ExportAnalysisPage = () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await axios.get('/analysis-api/analyze', {
+            const response = await axios.get('/api/analysis', {
                 params: { country: filters.country, item: filters.item }
             });
             setData(response.data);
@@ -64,7 +64,7 @@ const ExportAnalysisPage = () => {
     const fetchDashboard = async () => {
         setLoading(true);
         try {
-            const response = await axios.get('/analysis-api/dashboard');
+            const response = await axios.get('/api/analysis/dashboard');
             setDashboardData(response.data);
         } catch (err) {
             console.error("Dashboard Error:", err);

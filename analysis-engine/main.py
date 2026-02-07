@@ -1080,6 +1080,12 @@ async def analyze_consumer(item_id: str = Query(None, description="ASIN"), item_
         "has_data": True,
         "search_term": item_name if item_name else item_id,
         "metrics": {
+            # Frontend expected metrics
+            "total_reviews": total_count,
+            "impact_score": metrics.get("impact_score", 0),
+            "sentiment_z_score": metrics.get("sentiment_z_score", 0),
+            "satisfaction_index": metrics.get("satisfaction_index", 0),
+            # Additional metrics
             "nss": round(nss_score, 2),
             "cas": round(cas_score, 2),
             "pqi": round(pqi_score, 2),
@@ -1096,10 +1102,10 @@ async def analyze_consumer(item_id: str = Query(None, description="ASIN"), item_
         "charts": {
             "impact_diverging_bar": json.loads(fig_diverging.to_json()),
             "positivity_bar": json.loads(fig_positivity.to_json()),
+            "value_radar": json.loads(fig_radar.to_json()),  # Renamed from sensory_radar
             "nss_gauge": json.loads(fig_nss.to_json()),
             "nss_cas_scatter": json.loads(fig_scatter_nss.to_json()),
             "quality_treemap": json.loads(fig_treemap.to_json()),
-            "sensory_radar": json.loads(fig_radar.to_json()),
             "marketing_matrix": json.loads(fig_marketing.to_json())
         }
     }

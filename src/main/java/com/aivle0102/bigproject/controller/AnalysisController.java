@@ -33,4 +33,10 @@ public class AnalysisController {
     public Mono<String> analyzeConsumer(@RequestParam("item_name") String itemName) {
         return analysisServiceClient.analyzeConsumer(itemName);
     }
+
+    @GetMapping("/analysis/dashboard")
+    @Cacheable(value = "analysis-dashboard", key = "'dashboard'")
+    public Mono<String> getDashboard() {
+        return analysisServiceClient.getDashboard();
+    }
 }

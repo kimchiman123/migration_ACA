@@ -58,4 +58,11 @@ public class AnalysisServiceClient {
                                 .retrieve()
                                 .bodyToMono(String.class);
         }
+
+        public Mono<String> getDashboard() {
+                return webClient.get()
+                                .uri("/dashboard")
+                                .retrieve()
+                                .bodyToMono(String.class);
+        }
 }
