@@ -12,6 +12,9 @@ import requests
 from openai import OpenAI
 
 from graph import compiled, make_initial_state, FORECAST_COUNTRIES
+from fastapi import FastAPI, Request
+from starlette.middleware.base import BaseHTTPMiddleware
+import uvicorn
 
 CUSTOM_CSS = """
 /* Minimal UI polish */
@@ -534,9 +537,24 @@ with gr.Blocks() as demo:
     options.change(on_option_change, [options, state], [state, chatbot, options, textbox])
 
 demo.queue()
-demo.launch(
-    server_name=os.getenv("GRADIO_SERVER_NAME", "0.0.0.0"),
-    server_port=7860,
-    root_path=os.getenv("GRADIO_ROOT_PATH", ""),
-    css=CUSTOM_CSS,
-)
+# FastAPI 앱 생성 및 Iframe 허용 설정
+app = FastAPI()
+
+# Iframe 허용을 위한 미들웨어 (X-Frame-Options 제거 및 CSP 설정)
+class IframeMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        # X-Frame-Options 헤더 제거 (iframe 허용)
+        if "X-Frame-Options" in response.headers:
+            del response.headers["X-Frame-Options"]
+        # CSP 헤더 설정 (모든 도메인 허용)
+        response.headers["Content-Security-Policy"] = "frame-ancestors *"
+        return response
+
+app.add_middleware(IframeMiddleware)
+
+# Gradio 앱을 FastAPI에 마운트
+app = gr.mount_gradio_app(app, demo, path="/")
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=7860)

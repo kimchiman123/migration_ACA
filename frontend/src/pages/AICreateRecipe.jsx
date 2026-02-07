@@ -5,16 +5,7 @@ const AICreateRecipe = () => {
     const { user } = useAuth();
     const rawName = user?.userName || localStorage.getItem('userName') || '사용자';
     const maskedName = rawName.length <= 1 ? '*' : `${rawName.slice(0, -1)}*`;
-    const iframeSrc = '/ai/recipe/';
-
-    const messages = [
-        {
-            id: 'init',
-            role: 'assistant',
-            type: 'text',
-            content: '기획하고 싶은 레시피가 있나요? 예/아니오로 선택해주세요.',
-        },
-    ];
+    const iframeSrc = 'https://bp-chatbot-app.wittysand-a0f4e87e.centralindia.azurecontainerapps.io/';
 
     return (
         <div className="relative">

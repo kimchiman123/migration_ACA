@@ -301,20 +301,20 @@ def load_data_background():
                 temp_df = pd.read_sql(query, conn)
                 
                 if not temp_df.empty:
-                    # Expand JSONB trend_data if exists
-                    if 'trend_data' in temp_df.columns:
-                        print("Expanding trend_data JSONB...", flush=True)
-                        def parse_trend(x):
+                    # [Optimization] Do NOT expand JSONB trend_data globally at startup.
+                    # This saves memory and CPU. We will extract specific fields on-demand in /analyze.
+                    df = temp_df
+
+                    # Ensure trend_data is parsed as dict (if it comes as string)
+                    if 'trend_data' in df.columns:
+                        # Vectorized parsing if possible, or simple apply (parsing 10MB is fast if not normalizing)
+                        def ensure_dict(x):
                             if isinstance(x, dict): return x
                             if isinstance(x, str):
                                 try: return json.loads(x)
                                 except: return {}
                             return {}
-                        
-                        trends = pd.json_normalize(temp_df['trend_data'].map(parse_trend))
-                        df = pd.concat([temp_df.drop(columns=['trend_data']), trends], axis=1)
-                    else:
-                        df = temp_df
+                        df['trend_data'] = df['trend_data'].apply(ensure_dict)
 
                     # Numeric Cleanups
                     numeric_cols = df.select_dtypes(include=[np.number]).columns
@@ -511,12 +511,34 @@ async def analyze(country: str = Query(...), item: str = Query(...)):
     # ---------------------------------------------------------
     fig_signal = make_subplots(specs=[[{"secondary_y": True}]])
     
+    # ---------------------------------------------------------
+    # Chart 2: Signal Map (Leading-Lagging)
+    # ---------------------------------------------------------
+    fig_signal = make_subplots(specs=[[{"secondary_y": True}]])
+    
+    # [Optimization] Extract Trend Data on-the-fly for filtered rows
+    # filtered['trend_data'] is a Series of dicts
+    
+    common_trend_key = f"{country_code}_KFood_mean"
+    
+    # Helper to safely get value from dict
+    def get_trend_val(row, key):
+        td = row.get('trend_data', {})
+        if not isinstance(td, dict): return None
+        return td.get(key)
+
     # 1. 공통 선행 지표: 전체 K-Food 관심도 (Baseline)
-    common_trend_col = f"{country_code}_KFood_mean"
-    has_common = common_trend_col in filtered.columns
+    # Check if we have data for this key in the first row (as a sample)
+    has_common = False
+    first_trend_data = filtered.iloc[0].get('trend_data', {}) if not filtered.empty else {}
+    if isinstance(first_trend_data, dict) and common_trend_key in first_trend_data:
+        has_common = True
+        
     if has_common:
+        # Extract series
+        y_common = filtered.apply(lambda r: get_trend_val(r, common_trend_key), axis=1)
         fig_signal.add_trace(go.Scatter(
-            x=filtered['period_str'], y=filtered[common_trend_col], 
+            x=filtered['period_str'], y=y_common, 
             name="K-Food 전체 관심도",
             line=dict(color='#fda4af', width=2, dash='dot'), # 연한 핑크 점선
             opacity=0.6
@@ -526,20 +548,36 @@ async def analyze(country: str = Query(...), item: str = Query(...)):
     trend_kw = ITEM_TO_TREND_MAPPING.get(item)
     # KFood와 중복되지 않는 경우에만 추가로 그림
     if trend_kw and trend_kw != "KFood":
-        specific_trend_col = f"{country_code}_{trend_kw}_mean"
-        if specific_trend_col in filtered.columns:
+        specific_trend_key = f"{country_code}_{trend_kw}_mean"
+        
+        # Check existence
+        has_specific = False
+        if isinstance(first_trend_data, dict) and specific_trend_key in first_trend_data:
+             has_specific = True
+             
+        if has_specific:
+            y_specific = filtered.apply(lambda r: get_trend_val(r, specific_trend_key), axis=1)
             fig_signal.add_trace(go.Scatter(
-                x=filtered['period_str'], y=filtered[specific_trend_col], 
+                x=filtered['period_str'], y=y_specific, 
                 name=f"품목 관심도 ({trend_kw})",
                 line=dict(color='#f43f5e', width=4), # 진한 장미색 실선
                 mode='lines+markers'
             ), secondary_y=True)
+            
     elif not has_common:
         # KFood도 없고 매핑도 없을 때만 아무 트렌드나 하나 찾아서 표시 (폴백)
-        fallback_col = next((c for c in filtered.columns if c.startswith(f"{country_code}_") and c.endswith("_mean")), None)
-        if fallback_col:
+        # Find any key ending in _mean inside the first row's trend_data
+        fallback_key = None
+        if isinstance(first_trend_data, dict):
+            for k in first_trend_data.keys():
+                if k.startswith(f"{country_code}_") and k.endswith("_mean"):
+                    fallback_key = k
+                    break
+        
+        if fallback_key:
+            y_fallback = filtered.apply(lambda r: get_trend_val(r, fallback_key), axis=1)
             fig_signal.add_trace(go.Scatter(
-                x=filtered['period_str'], y=filtered[fallback_col], 
+                x=filtered['period_str'], y=y_fallback, 
                 name="관심도 (관련 데이터)",
                 line=dict(color='#f43f5e', width=3)
             ), secondary_y=True)
