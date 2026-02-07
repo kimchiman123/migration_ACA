@@ -48,4 +48,14 @@ public class AnalysisServiceClient {
                                 .retrieve()
                                 .bodyToMono(String.class);
         }
+
+        public Mono<String> analyzeConsumer(String itemName) {
+                return webClient.get()
+                                .uri(uriBuilder -> uriBuilder
+                                                .path("/analyze/consumer")
+                                                .queryParam("item_name", itemName)
+                                                .build())
+                                .retrieve()
+                                .bodyToMono(String.class);
+        }
 }

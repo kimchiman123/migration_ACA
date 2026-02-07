@@ -27,4 +27,10 @@ public class AnalysisController {
     public Mono<String> getItems() {
         return analysisServiceClient.getAvailableItems();
     }
+
+    @GetMapping("/analysis/consumer")
+    @Cacheable(value = "analysis-consumer", key = "#itemName")
+    public Mono<String> analyzeConsumer(@RequestParam("item_name") String itemName) {
+        return analysisServiceClient.analyzeConsumer(itemName);
+    }
 }

@@ -23,7 +23,7 @@ const ConsumerAnalysisPage = () => {
         setError(null);
         try {
             // Using item_name query param for keyword search
-            const response = await axios.get('/analysis-api/analyze/consumer', {
+            const response = await axios.get('/api/analysis/consumer', {
                 params: { item_name: searchTerm }
             });
 
