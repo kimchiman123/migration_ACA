@@ -298,16 +298,26 @@ def load_data_background():
                 # 1. Load Export Trends
                 print(f"Loading export_trends from DB (Attempt {i+1}/{max_retries})...", flush=True)
                 query = "SELECT * FROM export_trends"
-                temp_df = pd.read_sql(query, conn)
+                
+                # [Fix] Use cursor directly to avoid Pandas/SQLAlchemy warning and potential hang
+                with conn.cursor() as cur:
+                    cur.execute(query)
+                    if cur.description:
+                        cols = [desc[0] for desc in cur.description]
+                        rows = cur.fetchall()
+                        temp_df = pd.DataFrame(rows, columns=cols)
+                    else:
+                        temp_df = pd.DataFrame()
+
+                print(f"Loaded {len(temp_df)} rows. Processing...", flush=True)
                 
                 if not temp_df.empty:
                     # [Optimization] Do NOT expand JSONB trend_data globally at startup.
-                    # This saves memory and CPU. We will extract specific fields on-demand in /analyze.
                     df = temp_df
 
                     # Ensure trend_data is parsed as dict (if it comes as string)
                     if 'trend_data' in df.columns:
-                        # Vectorized parsing if possible, or simple apply (parsing 10MB is fast if not normalizing)
+                        print("Processing trend_data column...", flush=True)
                         def ensure_dict(x):
                             if isinstance(x, dict): return x
                             if isinstance(x, str):
@@ -317,6 +327,7 @@ def load_data_background():
                         df['trend_data'] = df['trend_data'].apply(ensure_dict)
 
                     # Numeric Cleanups
+                    print("Performing numeric cleanup...", flush=True)
                     numeric_cols = df.select_dtypes(include=[np.number]).columns
                     df[numeric_cols] = df[numeric_cols].fillna(0)
                     
@@ -446,6 +457,9 @@ async def get_items():
 @app.get("/analyze")
 async def analyze(country: str = Query(...), item: str = Query(...)):
     
+    # [Debug] Log incoming request
+    print(f"[Analyze] Request: country={country}, item={item}", flush=True)
+    
     # 1. 매핑 및 유효성 검사
     country_name = REVERSE_MAPPING.get(country, country) # 코드(US) -> 이름(미국)
     if country in COUNTRY_MAPPING: # 입력이 한글(미국)이면 코드로 변환
@@ -455,6 +469,7 @@ async def analyze(country: str = Query(...), item: str = Query(...)):
          country_code = country # 입력이 코드(US)면 그대로
          
     csv_item_name = UI_TO_CSV_ITEM_MAPPING.get(item, item)
+    print(f"[Analyze] Mapped: country_name={country_name}, country_code={country_code}, csv_item={csv_item_name}", flush=True)
     
     # 데이터 필터링
     filtered = df[
@@ -462,7 +477,10 @@ async def analyze(country: str = Query(...), item: str = Query(...)):
         (df['item_name'] == csv_item_name)
     ].copy()
     
+    print(f"[Analyze] Filtered rows: {len(filtered)}", flush=True)
+    
     if filtered.empty or (filtered['export_value'].sum() == 0):
+        print(f"[Analyze] No data found for {country_name} - {csv_item_name}", flush=True)
         return {"has_data": False}
 
     # 날짜순 정렬
@@ -693,13 +711,16 @@ async def analyze_consumer(item_id: str = Query(None, description="ASIN"), item_
             filtered = pd.DataFrame()
             
     except Exception as e:
-        print(f"Data Fetch Error: {e}")
+        print(f"[Consumer] Data Fetch Error: {e}", flush=True)
         filtered = pd.DataFrame()
     finally:
         conn.close()
 
     if filtered.empty:
+        print(f"[Consumer] No data found for conditions: item_id={item_id}, item_name={item_name}", flush=True)
         return {"has_data": False, "message": "해당 조건의 데이터가 없습니다."}
+    
+    print(f"[Consumer] Found {len(filtered)} rows", flush=True)
 
     try:
         # === [중요] 데이터 결측치 처리 및 대체 로직 ===
